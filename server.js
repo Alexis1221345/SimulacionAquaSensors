@@ -253,3 +253,13 @@ process.on('SIGINT', async () => {
   console.log('[Server] ✓ Cerrado correctamente');
   process.exit(0);
 });
+
+// Evitar que Render se duerma (plan gratuito)
+const RENDER_URL = process.env.RENDER_EXTERNAL_URL;
+if (RENDER_URL) {
+  setInterval(() => {
+    fetch(RENDER_URL)
+      .then(() => console.log('Ping enviado para mantener el servicio activo'))
+      .catch(err => console.error('Error en ping:', err));
+  }, 14 * 60 * 1000); // cada 14 minutos
+}
