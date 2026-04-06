@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AquaSensors — Simulador</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* ── Header ── */
+  header {
+    background: #1a1d2e;
+    border-bottom: 1px solid #2d3748;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: linear-gradient(135deg, #3b82f6, #06b6d4);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .logo-text { font-size: 16px; font-weight: 600; color: #f1f5f9; }
+  .logo-sub  { font-size: 11px; color: #64748b; margin-top: 1px; }
+
+  #status-badge {
+    padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;
+    background: #1e293b; color: #64748b; border: 1px solid #2d3748;
+    transition: all 0.3s;
+  }
+  #status-badge.corriendo  { background: #052e16; color: #4ade80; border-color: #166534; }
+  #status-badge.pausado    { background: #1c1917; color: #fbbf24; border-color: #78350f; }
+  #status-badge.acelerado  { background: #1e1b4b; color: #a78bfa; border-color: #4c1d95; }
+
+  /* ── Layout ── */
+  .main { display: grid; grid-template-columns: 300px 1fr; gap: 0; min-height: calc(100vh - 57px); }
+
+  /* ── Sidebar ── */
+  aside {
+    background: #13151f;
+    border-right: 1px solid #1e2333;
+    padding: 20px 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .section-title {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
+    color: #475569; text-transform: uppercase; margin-bottom: 10px;
+  }
+
+  /* ── Controles ── */
+  label { font-size: 12px; color: #94a3b8; display: block; margin-bottom: 5px; }
+
+  select, input[type="number"] {
+    width: 100%; padding: 8px 10px; border-radius: 6px;
+    background: #1e2333; border: 1px solid #2d3748;
+    color: #e2e8f0; font-size: 13px; outline: none;
+    transition: border-color 0.2s;
+  }
+  select:focus, input:focus { border-color: #3b82f6; }
+
+  .checkbox-group { display: flex; flex-direction: column; gap: 6px; }
+  .checkbox-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px; border-radius: 6px;
+    background: #1e2333; border: 1px solid #2d3748;
+    cursor: pointer; transition: border-color 0.2s;
+  }
+  .checkbox-item:hover { border-color: #3b82f6; }
+  .checkbox-item input { accent-color: #3b82f6; }
+  .checkbox-item span { font-size: 12px; color: #cbd5e1; }
+
+  .toggle-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 0;
+  }
+  .toggle-row label { margin: 0; }
+  .toggle {
+    position: relative; width: 36px; height: 20px;
+    background: #2d3748; border-radius: 10px; cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle.on { background: #3b82f6; }
+  .toggle::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: white; transition: transform 0.2s;
+  }
+  .toggle.on::after { transform: translateX(16px); }
+
+  /* ── Botones ── */
+  .btn-group { display: flex; gap: 8px; }
+
+  .btn {
+    flex: 1; padding: 9px 12px; border-radius: 6px; border: none;
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    transition: all 0.2s; display: flex; align-items: center;
+    justify-content: center; gap: 5px;
+  }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-primary  { background: #2563eb; color: white; }
+  .btn-primary:hover:not(:disabled)  { background: #1d4ed8; }
+  .btn-warning  { background: #d97706; color: white; }
+  .btn-warning:hover:not(:disabled)  { background: #b45309; }
+  .btn-danger   { background: #dc2626; color: white; }
+  .btn-danger:hover:not(:disabled)   { background: #b91c1c; }
+  .btn-ghost    { background: #1e2333; color: #94a3b8; border: 1px solid #2d3748; }
+  .btn-ghost:hover:not(:disabled)    { border-color: #64748b; color: #e2e8f0; }
+  .btn-success  { background: #059669; color: white; }
+  .btn-success:hover:not(:disabled)  { background: #047857; }
+
+  /* ── Panel principal ── */
+  .content { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+
+  /* ── Cards de alberca ── */
+  .pool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+
+  .pool-card {
+    background: #1a1d2e; border: 1px solid #1e2333; border-radius: 12px;
+    padding: 16px; transition: border-color 0.3s;
+  }
+  .pool-card.alerta  { border-color: #f59e0b; }
+  .pool-card.critico { border-color: #ef4444; }
+
+  .pool-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .pool-nombre { font-size: 13px; font-weight: 600; color: #f1f5f9; }
+  .pool-ciclo  { font-size: 11px; color: #475569; }
+
+  .params-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  .param-cell {
+    background: #0f1117; border-radius: 8px; padding: 10px;
+    border: 1px solid #1e2333;
+  }
+  .param-label { font-size: 10px; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; }
+  .param-valor { font-size: 20px; font-weight: 700; margin: 2px 0; font-variant-numeric: tabular-nums; }
+  .param-unit  { font-size: 10px; color: #475569; }
+  .param-status { font-size: 10px; margin-top: 4px; font-weight: 500; }
+
+  .val-optimo  { color: #4ade80; }
+  .val-alerta  { color: #fbbf24; }
+  .val-critico { color: #f87171; }
+  .val-neutral { color: #60a5fa; }
+
+  .temp-row {
+    display: flex; gap: 8px; margin-top: 8px;
+  }
+  .temp-cell {
+    flex: 1; background: #0f1117; border-radius: 8px; padding: 8px 10px;
+    border: 1px solid #1e2333; display: flex; align-items: center;
+    justify-content: space-between;
+  }
+  .temp-cell .label { font-size: 10px; color: #475569; }
+  .temp-cell .valor { font-size: 14px; font-weight: 600; color: #60a5fa; }
+
+  /* ── Forzar valores ── */
+  .forzar-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid #1e2333; }
+  .forzar-title   { font-size: 10px; color: #475569; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .forzar-grid    { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .forzar-item    { display: flex; gap: 4px; }
+  .forzar-item input {
+    width: 60px; padding: 4px 6px; font-size: 12px;
+    background: #0f1117; border: 1px solid #2d3748;
+    border-radius: 4px; color: #e2e8f0;
+  }
+  .forzar-item button {
+    padding: 4px 8px; font-size: 11px; border: none;
+    background: #2563eb; color: white; border-radius: 4px;
+    cursor: pointer; white-space: nowrap;
+  }
+  .forzar-item button:hover { background: #1d4ed8; }
+
+  /* ── Inventario ── */
+  .inventario-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;
+  }
+  .inv-card {
+    background: #1a1d2e; border: 1px solid #1e2333; border-radius: 10px; padding: 14px;
+  }
+  .inv-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .inv-nombre { font-size: 12px; font-weight: 500; color: #cbd5e1; }
+  .inv-pool   { font-size: 10px; color: #475569; }
+  .inv-pct    { font-size: 18px; font-weight: 700; }
+  .inv-bar    { height: 6px; background: #1e2333; border-radius: 3px; overflow: hidden; }
+  .inv-fill   { height: 100%; border-radius: 3px; transition: width 0.5s, background 0.3s; }
+  .inv-detail { font-size: 11px; color: #64748b; margin-top: 6px; }
+
+  /* ── Alertas ── */
+  .alerts-list { display: flex; flex-direction: column; gap: 8px; }
+  .alert-item {
+    background: #1a1d2e; border-radius: 8px; padding: 12px 14px;
+    border-left: 3px solid #2d3748; display: flex;
+    align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .alert-item.alerta  { border-left-color: #f59e0b; }
+  .alert-item.critico { border-left-color: #ef4444; }
+  .alert-msg  { font-size: 12px; color: #cbd5e1; }
+  .alert-pool { font-size: 11px; color: #475569; margin-top: 2px; }
+  .alert-time { font-size: 10px; color: #475569; white-space: nowrap; }
+
+  /* ── Log ── */
+  .log-box {
+    background: #0d0f17; border: 1px solid #1e2333; border-radius: 8px;
+    padding: 12px; height: 160px; overflow-y: auto; font-family: monospace;
+    font-size: 11px; line-height: 1.6;
+  }
+  .log-line { color: #64748b; }
+  .log-line.info    { color: #60a5fa; }
+  .log-line.success { color: #4ade80; }
+  .log-line.warning { color: #fbbf24; }
+  .log-line.error   { color: #f87171; }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid #1e2333; margin-bottom: 16px; }
+  .tab {
+    padding: 8px 16px; font-size: 12px; font-weight: 500; cursor: pointer;
+    color: #64748b; border-bottom: 2px solid transparent; margin-bottom: -1px;
+    transition: all 0.2s;
+  }
+  .tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
+  .tab:hover:not(.active) { color: #94a3b8; }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ── Contadores ── */
+  .stats-row {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 4px;
+  }
+  .stat-cell {
+    background: #1a1d2e; border-radius: 8px; padding: 12px;
+    border: 1px solid #1e2333; text-align: center;
+  }
+  .stat-num   { font-size: 22px; font-weight: 700; color: #3b82f6; }
+  .stat-label { font-size: 10px; color: #475569; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  /* ── Scenario badge ── */
+  .scenario-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #1e293b; border: 1px solid #2d3748;
+    border-radius: 6px; padding: 5px 10px; font-size: 11px; color: #94a3b8;
+  }
+
+  .divider { height: 1px; background: #1e2333; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">💧</div>
+    <div>
+      <div class="logo-text">AquaSensors</div>
+      <div class="logo-sub">Simulador de Sensores</div>
+    </div>
+  </div>
+  <div id="status-badge">⏹ Detenido</div>
+</header>
+
+<div class="main">
+
+  <!-- ══ SIDEBAR ══ -->
+  <aside>
+
+    <!-- Escenario -->
+    <div>
+      <div class="section-title">Escenario</div>
+      <label>Tipo de simulación</label>
+      <select id="sel-escenario">
+        <option value="">Cargando...</option>
+      </select>
+      <div id="escenario-desc" style="font-size:11px;color:#64748b;margin-top:6px;line-height:1.5;"></div>
+    </div>
+
+    <!-- Albercas -->
+    <div>
+      <div class="section-title">Albercas</div>
+      <div id="pools-checkboxes" class="checkbox-group">
+        <div style="font-size:12px;color:#475569">Cargando albercas...</div>
+      </div>
+    </div>
+
+    <!-- Configuración -->
+    <div>
+      <div class="section-title">Configuración</div>
+      <div class="toggle-row">
+        <label>Modo acelerado</label>
+        <div class="toggle" id="toggle-acelerado" onclick="toggleAcelerado()"></div>
+      </div>
+      <div style="font-size:11px;color:#475569;margin-top:4px;">
+        Acelerado: 1 ciclo cada 30s<br>Real: 1 ciclo cada 3 horas
+      </div>
+      <div style="margin-top:12px;">
+        <label>Número de ciclos (0 = infinito)</label>
+        <input type="number" id="inp-ciclos" value="8" min="0" max="100">
+      </div>
+    </div>
+
+    <!-- Controles -->
+    <div>
+      <div class="section-title">Controles</div>
+      <div class="btn-group" style="margin-bottom:8px;">
+        <button class="btn btn-primary" id="btn-iniciar" onclick="cambiarEscenario()">⟳ Cambiar escenario</button>
+        <button class="btn btn-warning" id="btn-pausar" onclick="pausar()" disabled>⏸</button>
+        <button class="btn btn-danger"  id="btn-detener" onclick="detener()" disabled>⏹</button>
+      </div>
+      <button class="btn btn-ghost" style="width:100%;margin-top:4px;" onclick="reanudar()" id="btn-reanudar" disabled>▶ Reanudar</button>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Log -->
+    <div>
+      <div class="section-title">Log</div>
+      <div class="log-box" id="log-box">
+        <div class="log-line info">AquaSensors Simulator — corriendo automáticamente.</div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ══ CONTENIDO PRINCIPAL ══ -->
+  <div class="content">
+
+    <!-- Stats row -->
+    <div class="stats-row">
+      <div class="stat-cell">
+        <div class="stat-num" id="stat-ciclos">0</div>
+        <div class="stat-label">Ciclos</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num" id="stat-alertas">0</div>
+        <div class="stat-label">Alertas activas</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num" id="stat-criticos">0</div>
+        <div class="stat-label">Críticos</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num" id="stat-inv-bajo">0</div>
+        <div class="stat-label">Inv. bajo</div>
+      </div>
+    </div>
+
+    <!-- Condiciones actuales del clima -->
+    <div id="clima-card" style="background:#1a1d2e;border:1px solid #1e2333;border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="clima-icon" style="font-size:20px;">🌤</span>
+        <div>
+          <div style="font-size:11px;color:#475569;text-transform:uppercase;letter-spacing:.05em;">Condición actual</div>
+          <div id="clima-desc" style="font-size:13px;font-weight:500;color:#e2e8f0;">Cargando...</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;">
+        <div style="text-align:center;">
+          <div style="font-size:18px;font-weight:700;color:#f87171;" id="clima-tamb">—°C</div>
+          <div style="font-size:10px;color:#475569;">T. Ambiente</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:18px;font-weight:700;color:#60a5fa;" id="clima-tagua">—°C</div>
+          <div style="font-size:10px;color:#475569;">T. Agua</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:18px;font-weight:700;color:#fbbf24;" id="clima-uv">—</div>
+          <div style="font-size:10px;color:#475569;">UV</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:18px;font-weight:700;color:#4ade80;" id="clima-uso">—%</div>
+          <div style="font-size:10px;color:#475569;">Uso alberca</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:13px;font-weight:600;color:#a78bfa;" id="clima-escenario">—</div>
+          <div style="font-size:10px;color:#475569;">Escenario</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:13px;font-weight:600;color:#94a3b8;" id="clima-hora">—:00h</div>
+          <div style="font-size:10px;color:#475569;">Hora real</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('albercas')">Albercas</div>
+      <div class="tab" onclick="showTab('inventario')">Inventario</div>
+      <div class="tab" onclick="showTab('alertas')">Alertas</div>
+    </div>
+
+    <!-- Tab: Albercas -->
+    <div class="tab-content active" id="tab-albercas">
+      <div class="pool-grid" id="pool-cards">
+        <div style="color:#475569;font-size:13px;padding:20px;">
+          Inicia una simulación para ver los datos en tiempo real.
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Inventario -->
+    <div class="tab-content" id="tab-inventario">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+        <button class="btn btn-success" style="width:auto;padding:7px 16px;" onclick="reponerTodo()">
+          + Reponer todo al 100%
+        </button>
+      </div>
+      <div class="inventario-grid" id="inventario-grid">
+        <div style="color:#475569;font-size:13px;padding:20px;">
+          Cargando inventario...
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Alertas -->
+    <div class="tab-content" id="tab-alertas">
+      <div class="alerts-list" id="alerts-list">
+        <div style="color:#475569;font-size:13px;padding:20px;">
+          Sin alertas recientes.
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// Estado global
+// ═══════════════════════════════════════════════════════════════════
+let poolsDisponibles = [];
+let escenariosDisponibles = [];
+let acelerado = false;
+let ws = null;
+let alertasCount = { alerta: 0, critico: 0 };
+
+// ── WebSocket ────────────────────────────────────────────────────
+function conectarWS() {
+  ws = new WebSocket(`ws://${location.host}`);
+
+  ws.onopen = () => {
+    log('Conectado al servidor', 'success');
+  };
+
+  ws.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    actualizarEstado(data);
+  };
+
+  ws.onclose = () => {
+    log('Desconectado — reconectando en 3s...', 'warning');
+    setTimeout(conectarWS, 3000);
+  };
+}
+
+// ── Cargar datos iniciales ────────────────────────────────────────
+async function cargarInicial() {
+  // Pools
+  const resPools = await fetch('/api/pools');
+  poolsDisponibles = await resPools.json();
+  renderPoolCheckboxes();
+
+  // Escenarios
+  const resEsc = await fetch('/api/scenarios');
+  escenariosDisponibles = await resEsc.json();
+  renderEscenarios();
+
+  // Inventario
+  cargarInventario();
+
+  // Alertas
+  cargarAlertas();
+}
+
+// ── Render checkboxes de albercas ─────────────────────────────────
+function renderPoolCheckboxes() {
+  const container = document.getElementById('pools-checkboxes');
+  container.innerHTML = poolsDisponibles.map(p => `
+    <label class="checkbox-item">
+      <input type="checkbox" value="${p.id}" checked>
+      <span>${p.nombre}<br><span style="color:#475569;font-size:10px;">${(p.volumen_litros/1000).toLocaleString('es-MX')} m³</span></span>
+    </label>
+  `).join('');
+}
+
+// ── Render select de escenarios ────────────────────────────────────
+function renderEscenarios() {
+  const sel = document.getElementById('sel-escenario');
+  sel.innerHTML = escenariosDisponibles.map(e =>
+    `<option value="${e.key}">${e.nombre} (${e.temp_min}-${e.temp_max}°C)</option>`
+  ).join('');
+  actualizarDescEscenario();
+  sel.addEventListener('change', actualizarDescEscenario);
+}
+
+function actualizarDescEscenario() {
+  const key = document.getElementById('sel-escenario').value;
+  const esc = escenariosDisponibles.find(e => e.key === key);
+  document.getElementById('escenario-desc').textContent = esc ? esc.descripcion : '';
+}
+
+// ── Toggle acelerado ──────────────────────────────────────────────
+function toggleAcelerado() {
+  acelerado = !acelerado;
+  document.getElementById('toggle-acelerado').classList.toggle('on', acelerado);
+}
+
+// ── Iniciar simulación ────────────────────────────────────────────
+async function cambiarEscenario() {
+  const poolIds = [...document.querySelectorAll('#pools-checkboxes input:checked')]
+    .map(i => i.value);
+  const escenario = document.getElementById('sel-escenario').value;
+  const ciclos    = parseInt(document.getElementById('inp-ciclos').value) || 0;
+
+  if (poolIds.length === 0) { log('Selecciona al menos una alberca', 'error'); return; }
+  if (!escenario)           { log('Selecciona un escenario', 'error'); return; }
+
+  log(`Iniciando: ${escenario} — ${poolIds.length} alberca(s)`, 'info');
+
+  const res = await fetch('/api/cambiar-escenario', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ escenario, acelerado }),
+  });
+
+  const data = await res.json();
+  if (data.error) { log(data.error, 'error'); return; }
+  log('Simulación iniciada correctamente', 'success');
+}
+
+// ── Controles ─────────────────────────────────────────────────────
+async function pausar()   { await fetch('/api/pausar',   { method: 'POST' }); log('Pausado', 'warning'); }
+async function reanudar() { await fetch('/api/reanudar', { method: 'POST' }); log('Reanudado', 'success'); }
+async function detener()  {
+  await fetch('/api/detener', { method: 'POST' });
+  log('Simulación detenida', 'warning');
+}
+
+// ── Forzar valor ──────────────────────────────────────────────────
+async function forzarValor(poolId, parametro, inputId) {
+  const valor = document.getElementById(inputId).value;
+  if (!valor) return;
+  await fetch('/api/forzar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pool_id: poolId, parametro, valor }),
+  });
+  log(`Forzado ${parametro}=${valor} en pool`, 'warning');
+}
+
+// ── Actualizar widget de clima
+function actualizarClima(data) {
+  const cond = data.condiciones;
+  if (!cond) return;
+
+  const hora = data.horaReal || new Date().getHours();
+  const llueve = cond.estaLloviendo;
+  const icono = llueve ? '🌧' : hora >= 20 || hora < 6 ? '🌙' : hora >= 18 ? '🌇' : cond.factorUV > 0.7 ? '☀️' : '⛅';
+
+  document.getElementById('clima-icon').textContent     = icono;
+  document.getElementById('clima-desc').textContent     = cond.desc || '—';
+  document.getElementById('clima-tamb').textContent     = cond.tempAmbiente + '°C';
+  document.getElementById('clima-tagua').textContent    = cond.tempAgua + '°C';
+  document.getElementById('clima-uv').textContent       = cond.factorUV;
+  document.getElementById('clima-uso').textContent      = (cond.factorUso || 0) + '%';
+  document.getElementById('clima-escenario').textContent= data.escenario || '—';
+  document.getElementById('clima-hora').textContent     = String(hora).padStart(2,'0') + ':00h';
+
+  // Color de temperatura según nivel
+  const tEl = document.getElementById('clima-tamb');
+  tEl.style.color = cond.tempAmbiente > 35 ? '#f87171' : cond.tempAmbiente > 28 ? '#fbbf24' : '#60a5fa';
+}
+
+// ── Actualizar estado desde WebSocket ────────────────────────────
+function actualizarEstado(data) {
+  // Badge de estado
+  const badge = document.getElementById('status-badge');
+  if (data.corriendo && data.acelerado) {
+    badge.textContent = '⚡ Acelerado';
+    badge.className = 'acelerado';
+  } else if (data.corriendo) {
+    badge.textContent = '▶ Corriendo';
+    badge.className = 'corriendo';
+  } else {
+    badge.textContent = '⏹ Detenido';
+    badge.className = '';
+  }
+
+  // Botones
+  document.getElementById('btn-iniciar').disabled  = false;
+  document.getElementById('btn-pausar').disabled   = !data.corriendo;
+  document.getElementById('btn-detener').disabled  = !data.corriendo && !data.sesionId;
+  document.getElementById('btn-reanudar').disabled = data.corriendo || !data.sesionId;
+
+  // Stats
+  document.getElementById('stat-ciclos').textContent = data.ciclosHechos || 0;
+
+  // Actualizar clima
+  actualizarClima(data);
+
+  // Cards de alberca
+  if (data.pools && data.pools.length > 0) {
+    renderPoolCards(data.pools);
+  }
+
+  // Recargar inventario y alertas cada ciclo
+  cargarInventario();
+  cargarAlertas();
+}
+
+// ── Render cards de albercas ──────────────────────────────────────
+function renderPoolCards(pools) {
+  const container = document.getElementById('pool-cards');
+  container.innerHTML = pools.map(pool => {
+    const hora = String(pool.hora_simulada).padStart(2, '0') + ':00';
+    return `
+    <div class="pool-card ${nivelCard(pool)}" id="card-${pool.pool_id}">
+      <div class="pool-header">
+        <div class="pool-nombre">${pool.nombre}</div>
+        <div class="pool-ciclo">Ciclo ${pool.ciclo} · ${hora}h sim.</div>
+      </div>
+
+      <div class="params-grid">
+        ${paramCell('Cloro', pool.cloro, 'ppm', 'cloro', 1.0, 3.0)}
+        ${paramCell('pH', pool.ph, '', 'ph', 7.2, 7.8)}
+        ${paramCell('Alcalinidad', pool.alcalinidad, 'ppm', 'alcalinidad', 80, 150)}
+        ${paramCell('Turbidez', pool.turbidez, 'NTU', 'turbidez', 0, 1.0, true)}
+      </div>
+
+      <div class="temp-row">
+        <div class="temp-cell">
+          <span class="label">T° Agua</span>
+          <span class="valor">${pool.temp_agua}°C</span>
+        </div>
+        <div class="temp-cell">
+          <span class="label">T° Ambiente</span>
+          <span class="valor">${pool.temp_ambiente}°C</span>
+        </div>
+      </div>
+
+      <div class="forzar-section">
+        <div class="forzar-title">Forzar valores</div>
+        <div class="forzar-grid">
+          ${forzarInput(pool.pool_id, 'cloro', 'Cloro')}
+          ${forzarInput(pool.pool_id, 'ph', 'pH')}
+          ${forzarInput(pool.pool_id, 'alcalinidad', 'Alc.')}
+          ${forzarInput(pool.pool_id, 'turbidez', 'Turb.')}
+        </div>
+      </div>
+    </div>
+    `;
+  }).join('');
+}
+
+function paramCell(label, valor, unit, tipo, min, max, invertido = false) {
+  let cls = 'val-optimo';
+  if (invertido) {
+    cls = valor > max ? 'val-alerta' : 'val-optimo';
+    if (valor > max * 2) cls = 'val-critico';
+  } else {
+    if (valor < min || valor > max) cls = 'val-alerta';
+    if (valor < min * 0.85 || valor > max * 1.1) cls = 'val-critico';
+  }
+  return `
+    <div class="param-cell">
+      <div class="param-label">${label}</div>
+      <div class="param-valor ${cls}">${valor}</div>
+      <div class="param-unit">${unit}</div>
+    </div>
+  `;
+}
+
+function forzarInput(poolId, param, label) {
+  const inputId = `inp-${poolId.slice(0,8)}-${param}`;
+  return `
+    <div class="forzar-item">
+      <input type="number" id="${inputId}" placeholder="${label}" step="0.1">
+      <button onclick="forzarValor('${poolId}','${param}','${inputId}')">Set</button>
+    </div>
+  `;
+}
+
+function nivelCard(pool) {
+  if (pool.cloro < 0.5 || pool.ph < 6.8 || pool.ph > 8.2 || pool.turbidez > 4) return 'critico';
+  if (pool.cloro < 1.0 || pool.ph < 7.2 || pool.ph > 7.8 || pool.turbidez > 1) return 'alerta';
+  return '';
+}
+
+// ── Inventario ────────────────────────────────────────────────────
+async function cargarInventario() {
+  const res = await fetch('/api/inventario');
+  const data = await res.json();
+
+  let bajosCount = 0;
+  const container = document.getElementById('inventario-grid');
+  container.innerHTML = data.map(item => {
+    const pct  = item.pct;
+    const bajo = pct <= 20;
+    if (bajo) bajosCount++;
+    const color = pct > 50 ? '#4ade80' : pct > 20 ? '#fbbf24' : '#f87171';
+    return `
+      <div class="inv-card">
+        <div class="inv-header">
+          <div>
+            <div class="inv-nombre">${item.quimico_nombre}</div>
+            <div class="inv-pool">${item.pool_nombre || item.pool_id.slice(0,8)}</div>
+          </div>
+          <div class="inv-pct" style="color:${color}">${pct}%</div>
+        </div>
+        <div class="inv-bar">
+          <div class="inv-fill" style="width:${pct}%;background:${color}"></div>
+        </div>
+        <div class="inv-detail">
+          ${item.nivel_actual_litros.toFixed(1)}L de ${item.capacidad_max_litros}L
+          ${bajo ? ' · ⚠ Reabastecer' : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('stat-inv-bajo').textContent = bajosCount;
+}
+
+// ── Reponer inventario ────────────────────────────────────────────
+async function reponerTodo() {
+  for (const pool of poolsDisponibles) {
+    await fetch('/api/inventario/reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pool_id: pool.id }),
+    });
+  }
+  log('Inventario repuesto al 100% en todas las albercas', 'success');
+  cargarInventario();
+}
+
+// ── Alertas ───────────────────────────────────────────────────────
+async function cargarAlertas() {
+  const res = await fetch('/api/alertas');
+  const data = await res.json();
+
+  let alertaCount = 0, criticoCount = 0;
+  data.forEach(a => {
+    if (!a.resuelta) {
+      if (a.nivel === 'critico') criticoCount++;
+      else alertaCount++;
+    }
+  });
+
+  document.getElementById('stat-alertas').textContent = alertaCount + criticoCount;
+  document.getElementById('stat-criticos').textContent = criticoCount;
+
+  const container = document.getElementById('alerts-list');
+  if (data.length === 0) {
+    container.innerHTML = '<div style="color:#475569;font-size:13px;padding:20px;">Sin alertas recientes.</div>';
+    return;
+  }
+
+  container.innerHTML = data.map(a => {
+    const fecha = new Date(a.created_at).toLocaleString('es-MX', {
+      hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit'
+    });
+    return `
+      <div class="alert-item ${a.nivel}">
+        <div>
+          <div class="alert-msg">${a.mensaje}</div>
+          <div class="alert-pool">${a.pools?.nombre || ''} · ${a.parametro}</div>
+        </div>
+        <div class="alert-time">${fecha}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    const names = ['albercas', 'inventario', 'alertas'];
+    t.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+  if (name === 'inventario') cargarInventario();
+  if (name === 'alertas')    cargarAlertas();
+}
+
+// ── Log ───────────────────────────────────────────────────────────
+function log(msg, tipo = 'log') {
+  const box = document.getElementById('log-box');
+  const hora = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const div = document.createElement('div');
+  div.className = `log-line ${tipo}`;
+  div.textContent = `[${hora}] ${msg}`;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+// ── Init ──────────────────────────────────────────────────────────
+cargarInicial();
+conectarWS();
+
+// Refrescar alertas e inventario cada 15s aunque no haya ciclo nuevo
+setInterval(() => { cargarAlertas(); cargarInventario(); }, 15000);
+</script>
+</body>
+</html>
