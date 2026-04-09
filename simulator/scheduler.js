@@ -27,6 +27,9 @@ class Scheduler {
     this.estadoPools      = {};
     this.condicionesActuales = null;
     this.escenarioActual  = 'normal';
+
+    // Inicializar condiciones inmediatamente para que el primer WS las incluya
+    this._actualizarCondiciones();
   }
 
   async iniciar({ pools, acelerado }) {

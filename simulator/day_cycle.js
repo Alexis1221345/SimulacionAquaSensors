@@ -114,7 +114,7 @@ function getCondicionesHora(fecha) {
   // Temperatura ambiente en esta hora
   let tempAmbiente = estado.tempBaseHoy + perfil.temp_base;
   if (estaLloviendo) tempAmbiente -= 4; // lluvia baja temp
-  tempAmbiente += (Math.random() * 2 - 1); // ±1°C de ruido
+  tempAmbiente += (Math.random() * 2 - 1); // ±1°C de ruido por ciclo
 
   // Factor UV (cero si llueve o nublado)
   const factorUV = estaLloviendo

@@ -562,23 +562,94 @@ async function forzarValor(poolId, parametro, inputId) {
   log(`Forzado ${parametro}=${valor} en pool`, 'warning');
 }
 
-// ── Actualizar widget de clima
+// ── Generador de condiciones aleatorias locales (fallback) ─────────
+// Se usa cuando el servidor aún no ha mandado condiciones reales
+const _PERFIL_HORAS = {
+  0:{tb:-6,uv:0,uso:0.05,desc:'Madrugada'}, 1:{tb:-6.5,uv:0,uso:0.03,desc:'Madrugada'},
+  2:{tb:-7,uv:0,uso:0.02,desc:'Madrugada'}, 3:{tb:-7.2,uv:0,uso:0.02,desc:'Madrugada'},
+  4:{tb:-7,uv:0,uso:0.02,desc:'Madrugada'}, 5:{tb:-6.5,uv:0,uso:0.05,desc:'Amanecer'},
+  6:{tb:-5,uv:0.1,uso:0.10,desc:'Amanecer'}, 7:{tb:-3,uv:0.3,uso:0.20,desc:'Mañana temprana'},
+  8:{tb:-1,uv:0.5,uso:0.35,desc:'Mañana'}, 9:{tb:1,uv:0.7,uso:0.50,desc:'Mañana'},
+  10:{tb:2.5,uv:0.9,uso:0.70,desc:'Media mañana'}, 11:{tb:3.5,uv:1.0,uso:0.85,desc:'Pico UV'},
+  12:{tb:4,uv:1.0,uso:0.90,desc:'Mediodía'}, 13:{tb:4.2,uv:1.0,uso:0.95,desc:'Mediodía — pico'},
+  14:{tb:4.5,uv:0.9,uso:1.00,desc:'Tarde — pico'}, 15:{tb:4,uv:0.8,uso:0.95,desc:'Tarde'},
+  16:{tb:3.5,uv:0.6,uso:0.90,desc:'Tarde'}, 17:{tb:2.5,uv:0.4,uso:0.80,desc:'Tarde-noche'},
+  18:{tb:1.5,uv:0.2,uso:0.65,desc:'Atardecer'}, 19:{tb:0,uv:0,uso:0.45,desc:'Noche'},
+  20:{tb:-1.5,uv:0,uso:0.30,desc:'Noche'}, 21:{tb:-3,uv:0,uso:0.20,desc:'Noche'},
+  22:{tb:-4,uv:0,uso:0.10,desc:'Noche'}, 23:{tb:-5,uv:0,uso:0.07,desc:'Noche'},
+};
+const _TEMP_MES = {1:25,2:26,3:28,4:30,5:33,6:34,7:33,8:33,9:32,10:30,11:27,12:25};
+const _PROB_LLUVIA = {1:0.03,2:0.03,3:0.05,4:0.08,5:0.15,6:0.35,7:0.50,8:0.55,9:0.45,10:0.25,11:0.10,12:0.05};
+
+let _condLocal = null; // cache condiciones locales del día
+
+function _generarCondicionesLocales() {
+  const ahora = new Date();
+  const hora  = ahora.getHours();
+  const mes   = ahora.getMonth() + 1;
+  const dia   = ahora.getDate();
+
+  // Recalcular si es un día nuevo o no existe
+  if (!_condLocal || _condLocal._dia !== dia) {
+    const tempBaseHoy = _TEMP_MES[mes] + (Math.random() * 6 - 3);
+    const llueveHoy   = Math.random() < (_PROB_LLUVIA[mes] || 0.1);
+    const horaLluvia  = llueveHoy ? 12 + Math.floor(Math.random() * 8) : -1;
+    const durLluvia   = llueveHoy ? 2 + Math.floor(Math.random() * 4) : 0;
+    const esFinde     = ahora.getDay() === 0 || ahora.getDay() === 6;
+    _condLocal = { _dia: dia, tempBaseHoy, llueveHoy, horaLluvia, durLluvia, esFinde };
+  }
+
+  const p = _PERFIL_HORAS[hora];
+  const estaLloviendo = _condLocal.llueveHoy &&
+    hora >= _condLocal.horaLluvia &&
+    hora <  _condLocal.horaLluvia + _condLocal.durLluvia;
+
+  let tempAmbiente = _condLocal.tempBaseHoy + p.tb;
+  if (estaLloviendo) tempAmbiente -= 4;
+  tempAmbiente += (Math.random() * 2 - 1);
+  tempAmbiente = Math.round(tempAmbiente * 10) / 10;
+
+  const factorUV  = estaLloviendo ? 0 : Math.round(p.uv * (0.85 + Math.random() * 0.3) * 100) / 100;
+  const factorUso = Math.round(p.uso * (_condLocal.esFinde ? 1.3 : 1.0) * (0.9 + Math.random() * 0.2) * 100);
+  const tempAgua  = Math.round((tempAmbiente * 0.65 + 10) * 10) / 10;
+  const desc      = p.desc + (estaLloviendo ? ' 🌧' : '');
+
+  // Escenario
+  let escenario = 'Día Normal (22-26°C)';
+  if (estaLloviendo)       escenario = 'Lluvia Intensa';
+  else if (tempAmbiente > 35) escenario = 'Calor Extremo (38-42°C)';
+  else if (tempAmbiente < 20) escenario = 'Nublado / Frío (15-20°C)';
+  else if (factorUso > 85)    escenario = 'Uso Intensivo (fin de semana)';
+
+  return { hora, tempAmbiente, tempAgua, estaLloviendo, factorUV, factorUso, desc, escenario };
+}
+
+// ── Actualizar widget de clima ─────────────────────────────────────
 function actualizarClima(data) {
-  const cond = data.condiciones;
-  if (!cond) return;
+  // Usar condiciones del servidor si existen, o generar localmente
+  let cond     = data.condiciones;
+  let escenario = data.escenario;
+  let hora     = data.horaReal != null ? data.horaReal : new Date().getHours();
 
-  const hora = data.horaReal || new Date().getHours();
+  if (!cond) {
+    // Generar condiciones aleatorias locales como fallback
+    const local  = _generarCondicionesLocales();
+    cond         = local;
+    escenario    = local.escenario;
+    hora         = local.hora;
+  }
+
   const llueve = cond.estaLloviendo;
-  const icono = llueve ? '🌧' : hora >= 20 || hora < 6 ? '🌙' : hora >= 18 ? '🌇' : cond.factorUV > 0.7 ? '☀️' : '⛅';
+  const icono  = llueve ? '🌧' : hora >= 20 || hora < 6 ? '🌙' : hora >= 18 ? '🌇' : cond.factorUV > 0.7 ? '☀️' : '⛅';
 
-  document.getElementById('clima-icon').textContent     = icono;
-  document.getElementById('clima-desc').textContent     = cond.desc || '—';
-  document.getElementById('clima-tamb').textContent     = cond.tempAmbiente + '°C';
-  document.getElementById('clima-tagua').textContent    = cond.tempAgua + '°C';
-  document.getElementById('clima-uv').textContent       = cond.factorUV;
-  document.getElementById('clima-uso').textContent      = (cond.factorUso || 0) + '%';
-  document.getElementById('clima-escenario').textContent= data.escenario || '—';
-  document.getElementById('clima-hora').textContent     = String(hora).padStart(2,'0') + ':00h';
+  document.getElementById('clima-icon').textContent      = icono;
+  document.getElementById('clima-desc').textContent      = cond.desc || '—';
+  document.getElementById('clima-tamb').textContent      = cond.tempAmbiente + '°C';
+  document.getElementById('clima-tagua').textContent     = cond.tempAgua + '°C';
+  document.getElementById('clima-uv').textContent        = cond.factorUV;
+  document.getElementById('clima-uso').textContent       = (cond.factorUso || 0) + '%';
+  document.getElementById('clima-escenario').textContent = escenario || '—';
+  document.getElementById('clima-hora').textContent      = String(hora).padStart(2,'0') + ':00h';
 
   // Color de temperatura según nivel
   const tEl = document.getElementById('clima-tamb');
@@ -812,6 +883,14 @@ function log(msg, tipo = 'log') {
 // ── Init ──────────────────────────────────────────────────────────
 cargarInicial();
 conectarWS();
+
+// Mostrar clima local inmediatamente al cargar (antes de que llegue el WS)
+actualizarClima({});
+
+// Refrescar clima local cada 60s si no hay WS activo
+setInterval(() => {
+  if (!ws || ws.readyState !== WebSocket.OPEN) actualizarClima({});
+}, 60000);
 
 // Refrescar alertas e inventario cada 15s aunque no haya ciclo nuevo
 setInterval(() => { cargarAlertas(); cargarInventario(); }, 15000);
