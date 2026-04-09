@@ -140,6 +140,25 @@ class Injector {
     return errores.length === 0;
   }
 
+  // ── Insertar alerta química directamente a Supabase ──────────────
+  async insertarAlerta({ pool_id, parametro, valor_detectado, nivel, mensaje }) {
+    const { error } = await supabase.from('alerts').insert({
+      pool_id,
+      session_id:      this.sessionId,
+      parametro,
+      valor_detectado,
+      nivel,
+      mensaje,
+      resuelta:        false,
+      created_at:      new Date().toISOString(),
+    });
+    if (error) {
+      console.error(`[Alerta] Error insertando alerta ${parametro}:`, error.message);
+    } else {
+      console.log(`[Alerta] ${nivel.toUpperCase()} — ${parametro}: ${valor_detectado}`);
+    }
+  }
+
   // ── Descontar inventario tras dosis recomendada ──────────────────
   async descontarInventario(poolId, quimicoId, cantidadMl) {
     // Obtener nivel actual

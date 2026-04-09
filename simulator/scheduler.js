@@ -1,53 +1,49 @@
 // ═══════════════════════════════════════════════════════════════════
-// SCHEDULER — Controlador con ciclo diario automático por hora real
-// Lecturas cada 3h | Condiciones actualizadas cada 1h real
+// SCHEDULER — Lecturas cada 5 minutos con hora real
+// Sin modo acelerado — clima fijo aleatorio por día
 // ═══════════════════════════════════════════════════════════════════
 
 const Injector               = require('./injector');
 const { getCondicionesHora,
         getNombreEscenario } = require('./day_cycle');
 
-const INTERVALO_LECTURA_MS   = 3 * 60 * 60 * 1000; // 3h
-const INTERVALO_CONDICION_MS = 1 * 60 * 60 * 1000; // 1h
-const INTERVALO_ACELERADO_MS =       30 * 1000;     // 30s
-const INTERVALO_COND_ACEL_MS =       10 * 1000;     // 10s
+const INTERVALO_LECTURA_MS   = 5 * 60 * 1000;  // 5 minutos
+const INTERVALO_CONDICION_MS = 5 * 60 * 1000;  // actualizar display cada 5 min
 
 class Scheduler {
 
   constructor(broadcast) {
-    this.broadcast        = broadcast;
-    this.injector         = new Injector();
-    this.timerLectura     = null;
-    this.timerCondicion   = null;
-    this.corriendo        = false;
-    this.acelerado        = false;
-    this.pools            = [];
-    this.sesionId         = null;
-    this.ciclosHechos     = 0;
-    this.estadoPools      = {};
+    this.broadcast           = broadcast;
+    this.injector            = new Injector();
+    this.timerLectura        = null;
+    this.timerCondicion      = null;
+    this.corriendo           = false;
+    this.pools               = [];
+    this.sesionId            = null;
+    this.ciclosHechos        = 0;
+    this.estadoPools         = {};
     this.condicionesActuales = null;
-    this.escenarioActual  = 'normal';
+    this.escenarioActual     = 'normal';
 
-    // Inicializar condiciones inmediatamente para que el primer WS las incluya
+    // Cargar condiciones al arrancar
     this._actualizarCondiciones();
   }
 
-  async iniciar({ pools, acelerado }) {
+  async iniciar({ pools }) {
     if (this.corriendo) await this.detener();
 
     this.pools        = pools;
-    this.acelerado    = acelerado;
     this.ciclosHechos = 0;
     this.estadoPools  = {};
 
     await this.injector.testConexion();
 
     const sesion = await this.injector.crearSesion(
-      `Auto diario — ${new Date().toLocaleString('es-MX')}`,
-      'auto_diario',
+      `Simulación ${new Date().toLocaleString('es-MX')}`,
+      this.escenarioActual,
       pools.map(p => p.id),
-      null,
-      acelerado
+      this.condicionesActuales?.tempAmbiente || null,
+      false
     );
     this.sesionId = sesion.id;
 
@@ -65,20 +61,17 @@ class Scheduler {
     this._actualizarCondiciones();
     await this._ejecutarLectura();
 
-    const intLec  = acelerado ? INTERVALO_ACELERADO_MS : INTERVALO_LECTURA_MS;
-    const intCond = acelerado ? INTERVALO_COND_ACEL_MS : INTERVALO_CONDICION_MS;
-
     this.timerLectura = setInterval(async () => {
       if (!this.corriendo) return;
       await this._ejecutarLectura();
-    }, intLec);
+    }, INTERVALO_LECTURA_MS);
 
     this.timerCondicion = setInterval(() => {
       if (!this.corriendo) return;
       this._actualizarCondiciones();
-    }, intCond);
+    }, INTERVALO_CONDICION_MS);
 
-    console.log(`\n[Scheduler] Lecturas c/${acelerado ? '30s' : '3h'} | Condiciones c/${acelerado ? '10s' : '1h'}\n`);
+    console.log(`\n[Scheduler] Iniciado — lecturas cada 5min | Clima: ${this.escenarioActual}\n`);
     this._broadcastEstado();
   }
 
@@ -90,7 +83,7 @@ class Scheduler {
     this.condicionesActuales = condiciones;
     this.escenarioActual     = escenario;
 
-    console.log(`[DayCycle] ${ahora.toLocaleTimeString('es-MX')} — ${condiciones.desc} | ${condiciones.tempAmbiente}°C | UV:${condiciones.factorUV} | Uso:${(condiciones.factorUso*100).toFixed(0)}% | ${escenario}${condiciones.estaLloviendo ? ' 🌧' : ''}`);
+    console.log(`[DayCycle] ${ahora.toLocaleTimeString('es-MX')} | ${condiciones.desc} | ${condiciones.tempAmbiente}°C | UV:${condiciones.factorUV} | Uso:${(condiciones.factorUso*100).toFixed(0)}%`);
     this._broadcastEstado();
   }
 
@@ -125,22 +118,53 @@ class Scheduler {
           temp_agua:     tempAgua,
           temp_ambiente: tempAmb,
           lecturas: {
-            cloro:            { valor: cloro,       status: this._stCloro(cloro)  },
-            ph:               { valor: ph,           status: this._stPh(ph)        },
-            alcalinidad:      { valor: alcalinidad,  status: this._stAlc(alcalinidad) },
-            turbidez:         { valor: turbidez,     status: this._stTurb(turbidez) },
-            temperatura_agua: { valor: tempAgua,     status: 'optimo' },
+            cloro:            { valor: cloro,       status: this._stCloro(cloro)       },
+            ph:               { valor: ph,           status: this._stPh(ph)             },
+            alcalinidad:      { valor: alcalinidad,  status: this._stAlc(alcalinidad)   },
+            turbidez:         { valor: turbidez,     status: this._stTurb(turbidez)     },
+            temperatura_agua: { valor: tempAgua,     status: 'optimo'                   },
           },
         };
 
         const ok = await this.injector.insertarCiclo(cicloData);
-        if (ok) await this._procesarInventario(pool, cicloData);
+        if (ok) {
+          await this._procesarAlertas(pool, cicloData);
+          await this._procesarInventario(pool, cicloData);
+        }
 
       } catch (err) {
         console.error(`[Scheduler] Error pool ${pool.nombre}:`, err.message);
       }
     }
     this._broadcastEstado();
+  }
+
+  // ── Evaluar y enviar alertas químicas a Supabase ─────────────────
+  async _procesarAlertas(pool, { lecturas, temp_agua }) {
+    const checks = [
+      { param: 'cloro',       val: lecturas.cloro.valor,       st: lecturas.cloro.status       },
+      { param: 'ph',          val: lecturas.ph.valor,           st: lecturas.ph.status           },
+      { param: 'alcalinidad', val: lecturas.alcalinidad.valor,  st: lecturas.alcalinidad.status  },
+      { param: 'turbidez',    val: lecturas.turbidez.valor,     st: lecturas.turbidez.status     },
+    ];
+
+    for (const { param, val, st } of checks) {
+      if (st === 'optimo') continue;
+      await this.injector.insertarAlerta({
+        pool_id:         pool.id,
+        parametro:       param,
+        valor_detectado: val,
+        nivel:           st, // 'alerta' o 'critico'
+        mensaje:         this._mensajeAlerta(param, val, st),
+      });
+    }
+  }
+
+  _mensajeAlerta(param, val, nivel) {
+    const labels = { cloro:'Cloro', ph:'pH', alcalinidad:'Alcalinidad', turbidez:'Turbidez' };
+    const unidad = { cloro:'ppm', ph:'', alcalinidad:'ppm', turbidez:'NTU' };
+    const prefix = nivel === 'critico' ? '🔴 CRÍTICO' : '⚠️ Alerta';
+    return `${prefix} — ${labels[param]}: ${val}${unidad[param]}`;
   }
 
   _stPh(v)    { return v < 6.8 || v > 8.2 ? 'critico' : v < 7.2 || v > 7.8 ? 'alerta' : 'optimo'; }
@@ -154,20 +178,11 @@ class Scheduler {
       const ml = Math.min((2.0 - lecturas.cloro.valor) * (pool.volumen_litros/1000) * 10 / (12*0.01*0.95), 5000);
       dosis.push({ quimicoId: 'hipoclorito_sodio', ml });
     }
-    if      (lecturas.ph.valor < 7.2) dosis.push({ quimicoId: 'soda_caustica',           ml: 50  });
-    else if (lecturas.ph.valor > 7.8) dosis.push({ quimicoId: 'acido_muriatico',          ml: 50  });
+    if      (lecturas.ph.valor < 7.2) dosis.push({ quimicoId: 'soda_caustica',            ml: 50  });
+    else if (lecturas.ph.valor > 7.8) dosis.push({ quimicoId: 'acido_muriatico',           ml: 50  });
     if (lecturas.alcalinidad.valor < 80)  dosis.push({ quimicoId: 'alcalinidad_plus_liquido', ml: 200 });
-    if (lecturas.turbidez.valor   > 1.0)  dosis.push({ quimicoId: 'floculante',               ml: 100 });
+    if (lecturas.turbidez.valor   > 1.0)  dosis.push({ quimicoId: 'floculante',                ml: 100 });
     for (const d of dosis) await this.injector.descontarInventario(pool.id, d.quimicoId, d.ml);
-  }
-
-  forzarValor(poolId, parametro, valor) {
-    const e = this.estadoPools[poolId];
-    if (e) {
-      e[parametro] = parseFloat(valor);
-      console.log(`[Scheduler] Forzado ${parametro}=${valor} en ${poolId.slice(0,8)}`);
-      this._broadcastEstado();
-    }
   }
 
   pausar()   { this.corriendo = false; console.log('[Scheduler] ⏸ Pausado');   this._broadcastEstado(); }
@@ -188,15 +203,15 @@ class Scheduler {
     const cond = this.condicionesActuales;
     return {
       corriendo:    this.corriendo,
-      acelerado:    this.acelerado,
+      acelerado:    false,
       escenario:    this.escenarioActual,
       sesionId:     this.sesionId,
       ciclosHechos: this.ciclosHechos,
-      ciclosTotal:  0,
       horaReal:     new Date().getHours(),
       condiciones:  cond ? {
         hora:          cond.hora,
         desc:          cond.desc,
+        modoNombre:    cond.modoNombre,
         tempAmbiente:  cond.tempAmbiente,
         tempAgua:      cond.tempAgua,
         estaLloviendo: cond.estaLloviendo,

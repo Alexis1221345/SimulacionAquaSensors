@@ -1,177 +1,171 @@
 // ═══════════════════════════════════════════════════════════════════
-// DAY_CYCLE — Ciclo diario automático
-// Determina las condiciones de cada hora del día (0-23)
-// basándose en la hora real del sistema + variación aleatoria diaria
+// DAY_CYCLE — Modo climático aleatorio fijo para todo el día
+// Se sortea al arrancar el servidor y aplica las 24h con hora real
 // ═══════════════════════════════════════════════════════════════════
 
-// ── Perfil base por hora del día ─────────────────────────────────
-// Cada hora tiene: temp_ambiente, factor_uv, factor_uso, factor_lluvia
-// Colima, México — clima típico
-
-const PERFIL_HORAS = {
-  0:  { temp_base: -6.0, uv: 0.0, uso: 0.05, desc: 'Madrugada'      },
-  1:  { temp_base: -6.5, uv: 0.0, uso: 0.03, desc: 'Madrugada'      },
-  2:  { temp_base: -7.0, uv: 0.0, uso: 0.02, desc: 'Madrugada'      },
-  3:  { temp_base: -7.2, uv: 0.0, uso: 0.02, desc: 'Madrugada'      },
-  4:  { temp_base: -7.0, uv: 0.0, uso: 0.02, desc: 'Madrugada'      },
-  5:  { temp_base: -6.5, uv: 0.0, uso: 0.05, desc: 'Amanecer'       },
-  6:  { temp_base: -5.0, uv: 0.1, uso: 0.10, desc: 'Amanecer'       },
-  7:  { temp_base: -3.0, uv: 0.3, uso: 0.20, desc: 'Mañana temprana'},
-  8:  { temp_base: -1.0, uv: 0.5, uso: 0.35, desc: 'Mañana'         },
-  9:  { temp_base:  1.0, uv: 0.7, uso: 0.50, desc: 'Mañana'         },
-  10: { temp_base:  2.5, uv: 0.9, uso: 0.70, desc: 'Media mañana'   },
-  11: { temp_base:  3.5, uv: 1.0, uso: 0.85, desc: 'Pico UV'        },
-  12: { temp_base:  4.0, uv: 1.0, uso: 0.90, desc: 'Mediodía'       },
-  13: { temp_base:  4.2, uv: 1.0, uso: 0.95, desc: 'Mediodía — pico'},
-  14: { temp_base:  4.5, uv: 0.9, uso: 1.00, desc: 'Tarde — pico'   },
-  15: { temp_base:  4.0, uv: 0.8, uso: 0.95, desc: 'Tarde'          },
-  16: { temp_base:  3.5, uv: 0.6, uso: 0.90, desc: 'Tarde'          },
-  17: { temp_base:  2.5, uv: 0.4, uso: 0.80, desc: 'Tarde-noche'    },
-  18: { temp_base:  1.5, uv: 0.2, uso: 0.65, desc: 'Atardecer'      },
-  19: { temp_base:  0.0, uv: 0.0, uso: 0.45, desc: 'Noche'          },
-  20: { temp_base: -1.5, uv: 0.0, uso: 0.30, desc: 'Noche'          },
-  21: { temp_base: -3.0, uv: 0.0, uso: 0.20, desc: 'Noche'          },
-  22: { temp_base: -4.0, uv: 0.0, uso: 0.10, desc: 'Noche'          },
-  23: { temp_base: -5.0, uv: 0.0, uso: 0.07, desc: 'Noche'          },
-};
-
-// ── Temperatura base por mes (Colima) ────────────────────────────
 const TEMP_MES = {
   1: 25, 2: 26, 3: 28, 4: 30,
   5: 33, 6: 34, 7: 33, 8: 33,
   9: 32, 10: 30, 11: 27, 12: 25,
 };
 
-// ── Probabilidad de lluvia por mes en Colima ─────────────────────
-const PROB_LLUVIA_MES = {
-  1: 0.03, 2: 0.03, 3: 0.05, 4: 0.08,
-  5: 0.15, 6: 0.35, 7: 0.50, 8: 0.55,
-  9: 0.45, 10: 0.25, 11: 0.10, 12: 0.05,
+// ── Modos climáticos disponibles ─────────────────────────────────
+const MODOS_CLIMA = {
+  soleado: {
+    nombre:    'Soleado ☀️',
+    tempExtra:  3,
+    factorUV:   0.95,
+    llueve:     false,
+    desc:       'Día soleado',
+  },
+  nublado: {
+    nombre:    'Nublado ⛅',
+    tempExtra: -2,
+    factorUV:   0.3,
+    llueve:     false,
+    desc:       'Nublado',
+  },
+  lluvia: {
+    nombre:    'Lluvia 🌧',
+    tempExtra: -5,
+    factorUV:   0.0,
+    llueve:     true,
+    desc:       'Lluvia',
+  },
+  calor_extremo: {
+    nombre:    'Calor extremo 🔥',
+    tempExtra:  6,
+    factorUV:   1.0,
+    llueve:     false,
+    desc:       'Calor extremo',
+  },
+  fresco: {
+    nombre:    'Fresco 🌬️',
+    tempExtra: -4,
+    factorUV:   0.5,
+    llueve:     false,
+    desc:       'Día fresco',
+  },
 };
 
-// ── Estado persistente del día ────────────────────────────────────
-// Se recalcula cada vez que cambia el día del mes
-let _estadoDia = null;
-let _ultimoDia = -1;
+// Probabilidad de cada modo por mes (Colima)
+const PROB_MODOS_MES = {
+  1:  ['soleado','soleado','soleado','nublado','fresco'],
+  2:  ['soleado','soleado','nublado','fresco','soleado'],
+  3:  ['soleado','soleado','calor_extremo','nublado','soleado'],
+  4:  ['calor_extremo','soleado','soleado','nublado','calor_extremo'],
+  5:  ['calor_extremo','calor_extremo','soleado','lluvia','nublado'],
+  6:  ['lluvia','lluvia','calor_extremo','soleado','nublado'],
+  7:  ['lluvia','lluvia','lluvia','calor_extremo','nublado'],
+  8:  ['lluvia','lluvia','calor_extremo','nublado','lluvia'],
+  9:  ['lluvia','lluvia','nublado','soleado','calor_extremo'],
+  10: ['soleado','nublado','lluvia','soleado','fresco'],
+  11: ['soleado','fresco','nublado','soleado','soleado'],
+  12: ['fresco','soleado','nublado','fresco','soleado'],
+};
 
-function _calcularEstadoDia(fecha) {
-  const mes = fecha.getMonth() + 1;
-  const diaSemana = fecha.getDay(); // 0=dom, 6=sab
+// ── Perfil de uso por hora del día ──────────────────────────────
+const USO_HORAS = {
+  0:0.03, 1:0.02, 2:0.01, 3:0.01, 4:0.01, 5:0.03,
+  6:0.08, 7:0.18, 8:0.35, 9:0.55, 10:0.72, 11:0.85,
+  12:0.90, 13:0.95, 14:1.00, 15:0.95, 16:0.90, 17:0.80,
+  18:0.65, 19:0.45, 20:0.28, 21:0.18, 22:0.10, 23:0.05,
+};
 
-  // Temperatura base del mes con variación aleatoria diaria (±3°C)
-  const tempBaseHoy = TEMP_MES[mes] + (Math.random() * 6 - 3);
+// ── Curva de temperatura por hora (delta sobre la base) ──────────
+const TEMP_DELTA_HORA = {
+  0:-6.0, 1:-6.5, 2:-7.0, 3:-7.2, 4:-7.0, 5:-6.5,
+  6:-5.0, 7:-3.0, 8:-1.0, 9:1.0, 10:2.5, 11:3.5,
+  12:4.0, 13:4.2, 14:4.5, 15:4.0, 16:3.5, 17:2.5,
+  18:1.5, 19:0.0, 20:-1.5, 21:-3.0, 22:-4.0, 23:-5.0,
+};
 
-  // ¿Llueve hoy? Probabilidad por mes
-  const probLluvia = PROB_LLUVIA_MES[mes];
-  const llueveHoy  = Math.random() < probLluvia;
+// ── Estado global del día (se sortea al arrancar) ────────────────
+let _modoDia     = null;
+let _tempBaseDia = null;
+let _esFinde     = false;
+let _ultimoDia   = -1;
 
-  // Si llueve, ¿a qué hora empieza y termina?
-  const horaInicioLluvia = llueveHoy ? 12 + Math.floor(Math.random() * 8) : -1;
-  const duracionLluvia   = llueveHoy ? 2 + Math.floor(Math.random() * 4) : 0;
+function _sortearDia(fecha) {
+  const mes      = fecha.getMonth() + 1;
+  const diaSem   = fecha.getDay();
+  const opciones = PROB_MODOS_MES[mes];
+  const modo     = opciones[Math.floor(Math.random() * opciones.length)];
 
-  // ¿Es día de mucho uso? (finde + verano)
-  const esFinde    = diaSemana === 0 || diaSemana === 6;
-  const esVerano   = mes >= 6 && mes <= 9;
-  const factorDia  = esFinde ? 1.3 : (esVerano ? 1.1 : 1.0);
+  _modoDia     = MODOS_CLIMA[modo];
+  _tempBaseDia = TEMP_MES[mes] + _modoDia.tempExtra + (Math.random() * 4 - 2); // ±2°C
+  _esFinde     = diaSem === 0 || diaSem === 6;
+  _ultimoDia   = fecha.getDate();
 
-  // Variación aleatoria del día (±10% en todos los parámetros)
-  const variacionDia = 0.9 + Math.random() * 0.2;
-
-  return {
-    tempBaseHoy,
-    llueveHoy,
-    horaInicioLluvia,
-    duracionLluvia,
-    esFinde,
-    esVerano,
-    factorDia,
-    variacionDia,
-    mes,
-  };
+  console.log(`\n[DayCycle] ══ Nuevo día ${fecha.toLocaleDateString('es-MX')} ══`);
+  console.log(`[DayCycle] Modo: ${_modoDia.nombre} | TBase: ${_tempBaseDia.toFixed(1)}°C | Finde: ${_esFinde}`);
 }
 
-// ── Obtener condiciones para una hora específica ──────────────────
+// ── Obtener condiciones para la hora real actual ──────────────────
 function getCondicionesHora(fecha) {
-  const hora = fecha.getHours();
-  const dia  = fecha.getDate();
+  const dia = fecha.getDate();
 
-  // Recalcular estado del día si cambió
-  if (dia !== _ultimoDia) {
-    _estadoDia = _calcularEstadoDia(fecha);
-    _ultimoDia = dia;
-    console.log(`\n[DayCycle] ── Nuevo día: ${fecha.toLocaleDateString('es-MX')} ──`);
-    console.log(`[DayCycle] Temp base: ${_estadoDia.tempBaseHoy.toFixed(1)}°C | Lluvia: ${_estadoDia.llueveHoy ? `Sí (${_estadoDia.horaInicioLluvia}h-${_estadoDia.horaInicioLluvia + _estadoDia.duracionLluvia}h)` : 'No'} | Finde: ${_estadoDia.esFinde}`);
+  // Re-sortear si es un día nuevo
+  if (dia !== _ultimoDia || !_modoDia) {
+    _sortearDia(fecha);
   }
 
-  const perfil  = PERFIL_HORAS[hora];
-  const estado  = _estadoDia;
+  const hora       = fecha.getHours();
+  const deltaHora  = TEMP_DELTA_HORA[hora];
+  const usoBase    = USO_HORAS[hora];
 
-  // ¿Está lloviendo en esta hora?
-  const estaLloviendo = estado.llueveHoy &&
-    hora >= estado.horaInicioLluvia &&
-    hora <  estado.horaInicioLluvia + estado.duracionLluvia;
+  // Temperatura con curva horaria + ruido pequeño por lectura
+  let tempAmbiente = _tempBaseDia + deltaHora + (Math.random() * 1.0 - 0.5);
+  if (_modoDia.llueve) tempAmbiente -= 1; // lluvia enfría un poco más en el momento
+  tempAmbiente = Math.round(tempAmbiente * 10) / 10;
 
-  // Temperatura ambiente en esta hora
-  let tempAmbiente = estado.tempBaseHoy + perfil.temp_base;
-  if (estaLloviendo) tempAmbiente -= 4; // lluvia baja temp
-  tempAmbiente += (Math.random() * 2 - 1); // ±1°C de ruido por ciclo
+  // UV según modo + hora (sin UV en madrugada/noche)
+  const hayLuz   = hora >= 6 && hora <= 19;
+  const factorUV = hayLuz
+    ? Math.round(_modoDia.factorUV * (0.9 + Math.random() * 0.2) * 100) / 100
+    : 0;
 
-  // Factor UV (cero si llueve o nublado)
-  const factorUV = estaLloviendo
-    ? 0
-    : perfil.uv * (0.85 + Math.random() * 0.3);
+  // Uso: fin de semana +30%, lluvia -40%
+  let factorUso = usoBase * (_esFinde ? 1.3 : 1.0);
+  if (_modoDia.llueve) factorUso *= 0.6;
+  factorUso = Math.round(factorUso * 100) / 100;
 
-  // Factor de uso de la alberca
-  const factorUso = perfil.uso * estado.factorDia * estado.variacionDia;
+  // Temperatura agua sigue a ambiente con inercia
+  const tempAgua = Math.round((tempAmbiente * 0.65 + 10) * 10) / 10;
 
-  // ── Tasas de degradación según condiciones ────────────────────
-  // Más calor + más UV = más degradación de cloro
+  // ── Degradación química basada en condiciones ─────────────────
   const factorTemp  = 1 + Math.max(0, tempAmbiente - 25) * 0.04;
-  const degradCloro = -(0.08 + factorUV * 0.15 + factorUso * 0.12) * factorTemp;
+  const degradCloro = -(0.06 + factorUV * 0.12 + factorUso * 0.10) * factorTemp;
+  let   degradPh    = factorUso * 0.025;
+  if (_modoDia.llueve) degradPh -= 0.05;
+  let   degradAlc   = -0.20 - (_modoDia.llueve ? 2.0 : 0) - factorTemp * 0.12;
+  let   degradTurb  = factorUso * 0.03 + (_modoDia.llueve ? 0.15 : 0);
+  if (factorUV > 0.7) degradTurb += 0.015;
 
-  // pH: bañistas suben pH, lluvia lo baja
-  let degradPh = factorUso * 0.03;
-  if (estaLloviendo) degradPh -= 0.06;
-
-  // Alcalinidad: lluvia la baja rápido, calor la baja gradual
-  let degradAlc = -0.25 - (estaLloviendo ? 2.5 : 0) - factorTemp * 0.15;
-
-  // Turbidez: bañistas + lluvia la suben
-  let degradTurb = factorUso * 0.04 + (estaLloviendo ? 0.18 : 0);
-  if (factorUV > 0.7 && !estaLloviendo) degradTurb += 0.02; // algas con sol
-
-  // Temperatura del agua: sigue a ambiente con inercia
-  const tempAgua = tempAmbiente * 0.65 + 10; // agua más estable
+  const desc = `${_modoDia.desc}`;
 
   return {
     hora,
-    tempAmbiente: Math.round(tempAmbiente * 10) / 10,
-    tempAgua:     Math.round(tempAgua * 10) / 10,
-    estaLloviendo,
-    factorUV:     Math.round(factorUV * 100) / 100,
-    factorUso:    Math.round(factorUso * 100) / 100,
-    desc: perfil.desc + (estaLloviendo ? ' 🌧' : ''),
+    modoClima:    Object.keys(MODOS_CLIMA).find(k => MODOS_CLIMA[k] === _modoDia),
+    modoNombre:   _modoDia.nombre,
+    tempAmbiente,
+    tempAgua,
+    estaLloviendo: _modoDia.llueve,
+    factorUV,
+    factorUso,
+    esFinde:      _esFinde,
+    desc,
     degradacion: {
       cloro:       Math.round(degradCloro * 1000) / 1000,
       ph:          Math.round(degradPh    * 1000) / 1000,
       alcalinidad: Math.round(degradAlc   * 1000) / 1000,
       turbidez:    Math.round(degradTurb  * 1000) / 1000,
     },
-    esFinde:  estado.esFinde,
-    esVerano: estado.esVerano,
-    mes:      estado.mes,
   };
 }
 
-// ── Nombre legible del escenario actual ──────────────────────────
 function getNombreEscenario(condiciones) {
-  const { tempAmbiente, estaLloviendo, factorUso, esVerano, esFinde } = condiciones;
-  if (estaLloviendo)       return 'lluvia';
-  if (tempAmbiente > 35)   return 'calor_extremo';
-  if (tempAmbiente < 20)   return 'nublado_frio';
-  if (factorUso > 0.85)    return 'uso_intensivo';
-  if (esVerano && esFinde) return 'calor_extremo';
-  return 'normal';
+  return condiciones.modoNombre || condiciones.desc || 'normal';
 }
 
 module.exports = { getCondicionesHora, getNombreEscenario };

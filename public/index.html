@@ -297,22 +297,6 @@
       </div>
     </div>
 
-    <!-- Configuración -->
-    <div>
-      <div class="section-title">Configuración</div>
-      <div class="toggle-row">
-        <label>Modo acelerado</label>
-        <div class="toggle" id="toggle-acelerado" onclick="toggleAcelerado()"></div>
-      </div>
-      <div style="font-size:11px;color:#475569;margin-top:4px;">
-        Acelerado: 1 ciclo cada 30s<br>Real: 1 ciclo cada 3 horas
-      </div>
-      <div style="margin-top:12px;">
-        <label>Número de ciclos (0 = infinito)</label>
-        <input type="number" id="inp-ciclos" value="8" min="0" max="100">
-      </div>
-    </div>
-
     <!-- Controles -->
     <div>
       <div class="section-title">Controles</div>
@@ -513,11 +497,6 @@ function actualizarDescEscenario() {
   document.getElementById('escenario-desc').textContent = esc ? esc.descripcion : '';
 }
 
-// ── Toggle acelerado ──────────────────────────────────────────────
-function toggleAcelerado() {
-  acelerado = !acelerado;
-  document.getElementById('toggle-acelerado').classList.toggle('on', acelerado);
-}
 
 // ── Iniciar simulación ────────────────────────────────────────────
 async function cambiarEscenario() {
@@ -534,7 +513,7 @@ async function cambiarEscenario() {
   const res = await fetch('/api/cambiar-escenario', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ escenario, acelerado }),
+    body: JSON.stringify({ escenario }),
   });
 
   const data = await res.json();
