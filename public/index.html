@@ -450,7 +450,7 @@ let alertasCount = { alerta: 0, critico: 0 };
 
 // ── WebSocket ────────────────────────────────────────────────────
 function conectarWS() {
-  ws = new WebSocket(`ws://${location.host}`);
+ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`);
 
   ws.onopen = () => {
     log('Conectado al servidor', 'success');
