@@ -5,260 +5,197 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AquaSensors — Simulador</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: #0f1117;
-    color: #e2e8f0;
-    min-height: 100vh;
-    font-size: 14px;
-  }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #0f1117;
+  color: #e2e8f0;
+  min-height: 100vh;
+  font-size: 14px;
+}
 
-  /* ── Header ── */
-  header {
-    background: #1a1d2e;
-    border-bottom: 1px solid #2d3748;
-    padding: 14px 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .logo { display: flex; align-items: center; gap: 10px; }
-  .logo-icon {
-    width: 32px; height: 32px; border-radius: 8px;
-    background: linear-gradient(135deg, #3b82f6, #06b6d4);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px;
-  }
-  .logo-text { font-size: 16px; font-weight: 600; color: #f1f5f9; }
-  .logo-sub  { font-size: 11px; color: #64748b; margin-top: 1px; }
+/* ── Header ── */
+header {
+  background: #1a1d2e;
+  border-bottom: 1px solid #2d3748;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: linear-gradient(135deg, #3b82f6, #06b6d4);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+}
+.logo-text { font-size: 16px; font-weight: 600; color: #f1f5f9; }
+.logo-sub  { font-size: 11px; color: #64748b; margin-top: 1px; }
 
-  #status-badge {
-    padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;
-    background: #1e293b; color: #64748b; border: 1px solid #2d3748;
-    transition: all 0.3s;
-  }
-  #status-badge.corriendo  { background: #052e16; color: #4ade80; border-color: #166534; }
-  #status-badge.pausado    { background: #1c1917; color: #fbbf24; border-color: #78350f; }
-  #status-badge.acelerado  { background: #1e1b4b; color: #a78bfa; border-color: #4c1d95; }
+.header-right { display: flex; align-items: center; gap: 10px; }
 
-  /* ── Layout ── */
-  .main { display: grid; grid-template-columns: 300px 1fr; gap: 0; min-height: calc(100vh - 57px); }
+#bombas-badge {
+  padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+  background: #052e16; color: #4ade80; border: 1px solid #166534;
+  transition: all 0.3s; letter-spacing: 0.02em;
+}
+#bombas-badge.on { background: #450a0a; color: #f87171; border-color: #7f1d1d; }
 
-  /* ── Sidebar ── */
-  aside {
-    background: #13151f;
-    border-right: 1px solid #1e2333;
-    padding: 20px 16px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
+/* ── Layout ── */
+.main { display: grid; grid-template-columns: 280px 1fr; gap: 0; min-height: calc(100vh - 57px); }
 
-  .section-title {
-    font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
-    color: #475569; text-transform: uppercase; margin-bottom: 10px;
-  }
+/* ── Sidebar ── */
+aside {
+  background: #13151f;
+  border-right: 1px solid #1e2333;
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
 
-  /* ── Controles ── */
-  label { font-size: 12px; color: #94a3b8; display: block; margin-bottom: 5px; }
+.section-title {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
+  color: #475569; text-transform: uppercase; margin-bottom: 10px;
+}
 
-  select, input[type="number"] {
-    width: 100%; padding: 8px 10px; border-radius: 6px;
-    background: #1e2333; border: 1px solid #2d3748;
-    color: #e2e8f0; font-size: 13px; outline: none;
-    transition: border-color 0.2s;
-  }
-  select:focus, input:focus { border-color: #3b82f6; }
+/* ── Botones de modo ── */
+.modo-btn {
+  width: 100%; padding: 16px 12px; border-radius: 10px;
+  border: 2px solid transparent; cursor: pointer;
+  font-size: 14px; font-weight: 600; transition: all 0.2s;
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 8px;
+}
+.modo-btn .ico { font-size: 22px; }
+.modo-btn .info { text-align: left; }
+.modo-btn .info .titulo { font-size: 14px; font-weight: 600; }
+.modo-btn .info .sub { font-size: 11px; margin-top: 2px; opacity: 0.75; }
 
-  .checkbox-group { display: flex; flex-direction: column; gap: 6px; }
-  .checkbox-item {
-    display: flex; align-items: center; gap: 8px;
-    padding: 7px 10px; border-radius: 6px;
-    background: #1e2333; border: 1px solid #2d3748;
-    cursor: pointer; transition: border-color 0.2s;
-  }
-  .checkbox-item:hover { border-color: #3b82f6; }
-  .checkbox-item input { accent-color: #3b82f6; }
-  .checkbox-item span { font-size: 12px; color: #cbd5e1; }
+#btn-normal {
+  background: #1e2b42; color: #93c5fd; border-color: #1e3a5f;
+}
+#btn-normal.activo {
+  background: #1d3a6e; color: #bfdbfe; border-color: #3b82f6;
+  box-shadow: 0 0 0 1px #3b82f6;
+}
+#btn-normal:hover:not(.activo) { border-color: #2d5a9e; }
 
-  .toggle-row {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 8px 0;
-  }
-  .toggle-row label { margin: 0; }
-  .toggle {
-    position: relative; width: 36px; height: 20px;
-    background: #2d3748; border-radius: 10px; cursor: pointer;
-    transition: background 0.2s;
-  }
-  .toggle.on { background: #3b82f6; }
-  .toggle::after {
-    content: ''; position: absolute; top: 2px; left: 2px;
-    width: 16px; height: 16px; border-radius: 50%;
-    background: white; transition: transform 0.2s;
-  }
-  .toggle.on::after { transform: translateX(16px); }
+#btn-lluvia {
+  background: #1e1b42; color: #c4b5fd; border-color: #2e2060;
+}
+#btn-lluvia.activo {
+  background: #3b1d6e; color: #ddd6fe; border-color: #7c3aed;
+  box-shadow: 0 0 0 1px #7c3aed;
+}
+#btn-lluvia:hover:not(.activo) { border-color: #5b21b6; }
 
-  /* ── Botones ── */
-  .btn-group { display: flex; gap: 8px; }
+/* ── Info clima ── */
+.clima-info {
+  background: #1a1d2e; border: 1px solid #1e2333; border-radius: 8px;
+  padding: 12px 14px;
+}
+.clima-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.clima-row:last-child { margin-bottom: 0; }
+.clima-key { font-size: 11px; color: #64748b; }
+.clima-val { font-size: 13px; font-weight: 600; color: #e2e8f0; }
 
-  .btn {
-    flex: 1; padding: 9px 12px; border-radius: 6px; border: none;
-    font-size: 13px; font-weight: 500; cursor: pointer;
-    transition: all 0.2s; display: flex; align-items: center;
-    justify-content: center; gap: 5px;
-  }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  .btn-primary  { background: #2563eb; color: white; }
-  .btn-primary:hover:not(:disabled)  { background: #1d4ed8; }
-  .btn-warning  { background: #d97706; color: white; }
-  .btn-warning:hover:not(:disabled)  { background: #b45309; }
-  .btn-danger   { background: #dc2626; color: white; }
-  .btn-danger:hover:not(:disabled)   { background: #b91c1c; }
-  .btn-ghost    { background: #1e2333; color: #94a3b8; border: 1px solid #2d3748; }
-  .btn-ghost:hover:not(:disabled)    { border-color: #64748b; color: #e2e8f0; }
-  .btn-success  { background: #059669; color: white; }
-  .btn-success:hover:not(:disabled)  { background: #047857; }
+/* ── Log ── */
+.log-box {
+  background: #0d0f17; border: 1px solid #1e2333; border-radius: 8px;
+  padding: 12px; height: 200px; overflow-y: auto; font-family: monospace;
+  font-size: 11px; line-height: 1.7; flex: 1;
+}
+.log-line { color: #64748b; }
+.log-line.info    { color: #60a5fa; }
+.log-line.success { color: #4ade80; }
+.log-line.warning { color: #fbbf24; }
+.log-line.error   { color: #f87171; }
+.log-line.rain    { color: #a78bfa; }
 
-  /* ── Panel principal ── */
-  .content { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+/* ── Contenido ── */
+.content { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
 
-  /* ── Cards de alberca ── */
-  .pool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+/* ── Stats ── */
+.stats-row {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+}
+.stat-cell {
+  background: #1a1d2e; border-radius: 8px; padding: 12px;
+  border: 1px solid #1e2333; text-align: center;
+}
+.stat-num   { font-size: 22px; font-weight: 700; color: #3b82f6; }
+.stat-label { font-size: 10px; color: #475569; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
 
-  .pool-card {
-    background: #1a1d2e; border: 1px solid #1e2333; border-radius: 12px;
-    padding: 16px; transition: border-color 0.3s;
-  }
-  .pool-card.alerta  { border-color: #f59e0b; }
-  .pool-card.critico { border-color: #ef4444; }
+/* ── Tabs ── */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid #1e2333; margin-bottom: 16px; }
+.tab {
+  padding: 8px 16px; font-size: 12px; font-weight: 500; cursor: pointer;
+  color: #64748b; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: all 0.2s;
+}
+.tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
+.tab:hover:not(.active) { color: #94a3b8; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
 
-  .pool-header {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 14px;
-  }
-  .pool-nombre { font-size: 13px; font-weight: 600; color: #f1f5f9; }
-  .pool-ciclo  { font-size: 11px; color: #475569; }
+/* ── Pool cards ── */
+.pool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+.pool-card {
+  background: #1a1d2e; border: 1px solid #1e2333; border-radius: 12px; padding: 16px;
+  transition: border-color 0.3s;
+}
+.pool-card.alerta  { border-color: #f59e0b; }
+.pool-card.critico { border-color: #ef4444; }
+.pool-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+}
+.pool-nombre { font-size: 13px; font-weight: 600; color: #f1f5f9; }
+.pool-ciclo  { font-size: 11px; color: #475569; }
 
-  .params-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.params-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.param-cell {
+  background: #0f1117; border-radius: 8px; padding: 10px; border: 1px solid #1e2333;
+}
+.param-label  { font-size: 10px; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; }
+.param-valor  { font-size: 20px; font-weight: 700; margin: 2px 0; }
+.param-unit   { font-size: 10px; color: #475569; }
+.param-status { font-size: 10px; margin-top: 4px; font-weight: 500; }
+.val-optimo   { color: #4ade80; }
+.val-alerta   { color: #fbbf24; }
+.val-critico  { color: #f87171; }
 
-  .param-cell {
-    background: #0f1117; border-radius: 8px; padding: 10px;
-    border: 1px solid #1e2333;
-  }
-  .param-label { font-size: 10px; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; }
-  .param-valor { font-size: 20px; font-weight: 700; margin: 2px 0; font-variant-numeric: tabular-nums; }
-  .param-unit  { font-size: 10px; color: #475569; }
-  .param-status { font-size: 10px; margin-top: 4px; font-weight: 500; }
+.temp-row { display: flex; gap: 8px; margin-top: 8px; }
+.temp-cell {
+  flex: 1; background: #0f1117; border-radius: 8px; padding: 8px 10px;
+  border: 1px solid #1e2333; display: flex; align-items: center; justify-content: space-between;
+}
+.temp-cell .label { font-size: 10px; color: #475569; }
+.temp-cell .valor { font-size: 14px; font-weight: 600; color: #60a5fa; }
 
-  .val-optimo  { color: #4ade80; }
-  .val-alerta  { color: #fbbf24; }
-  .val-critico { color: #f87171; }
-  .val-neutral { color: #60a5fa; }
+.bomba-row {
+  margin-top: 8px; padding: 7px 10px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 11px; font-weight: 500;
+  background: #0f1117; border: 1px solid #1e2333;
+}
+.bomba-off { color: #4ade80; }
+.bomba-on  { color: #f87171; }
 
-  .temp-row {
-    display: flex; gap: 8px; margin-top: 8px;
-  }
-  .temp-cell {
-    flex: 1; background: #0f1117; border-radius: 8px; padding: 8px 10px;
-    border: 1px solid #1e2333; display: flex; align-items: center;
-    justify-content: space-between;
-  }
-  .temp-cell .label { font-size: 10px; color: #475569; }
-  .temp-cell .valor { font-size: 14px; font-weight: 600; color: #60a5fa; }
-
-  /* ── Forzar valores ── */
-  .forzar-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid #1e2333; }
-  .forzar-title   { font-size: 10px; color: #475569; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
-  .forzar-grid    { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-  .forzar-item    { display: flex; gap: 4px; }
-  .forzar-item input {
-    width: 60px; padding: 4px 6px; font-size: 12px;
-    background: #0f1117; border: 1px solid #2d3748;
-    border-radius: 4px; color: #e2e8f0;
-  }
-  .forzar-item button {
-    padding: 4px 8px; font-size: 11px; border: none;
-    background: #2563eb; color: white; border-radius: 4px;
-    cursor: pointer; white-space: nowrap;
-  }
-  .forzar-item button:hover { background: #1d4ed8; }
-
-  /* ── Inventario ── */
-  .inventario-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;
-  }
-  .inv-card {
-    background: #1a1d2e; border: 1px solid #1e2333; border-radius: 10px; padding: 14px;
-  }
-  .inv-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-  .inv-nombre { font-size: 12px; font-weight: 500; color: #cbd5e1; }
-  .inv-pool   { font-size: 10px; color: #475569; }
-  .inv-pct    { font-size: 18px; font-weight: 700; }
-  .inv-bar    { height: 6px; background: #1e2333; border-radius: 3px; overflow: hidden; }
-  .inv-fill   { height: 100%; border-radius: 3px; transition: width 0.5s, background 0.3s; }
-  .inv-detail { font-size: 11px; color: #64748b; margin-top: 6px; }
-
-  /* ── Alertas ── */
-  .alerts-list { display: flex; flex-direction: column; gap: 8px; }
-  .alert-item {
-    background: #1a1d2e; border-radius: 8px; padding: 12px 14px;
-    border-left: 3px solid #2d3748; display: flex;
-    align-items: center; justify-content: space-between; gap: 12px;
-  }
-  .alert-item.alerta  { border-left-color: #f59e0b; }
-  .alert-item.critico { border-left-color: #ef4444; }
-  .alert-msg  { font-size: 12px; color: #cbd5e1; }
-  .alert-pool { font-size: 11px; color: #475569; margin-top: 2px; }
-  .alert-time { font-size: 10px; color: #475569; white-space: nowrap; }
-
-  /* ── Log ── */
-  .log-box {
-    background: #0d0f17; border: 1px solid #1e2333; border-radius: 8px;
-    padding: 12px; height: 160px; overflow-y: auto; font-family: monospace;
-    font-size: 11px; line-height: 1.6;
-  }
-  .log-line { color: #64748b; }
-  .log-line.info    { color: #60a5fa; }
-  .log-line.success { color: #4ade80; }
-  .log-line.warning { color: #fbbf24; }
-  .log-line.error   { color: #f87171; }
-
-  /* ── Tabs ── */
-  .tabs { display: flex; gap: 4px; border-bottom: 1px solid #1e2333; margin-bottom: 16px; }
-  .tab {
-    padding: 8px 16px; font-size: 12px; font-weight: 500; cursor: pointer;
-    color: #64748b; border-bottom: 2px solid transparent; margin-bottom: -1px;
-    transition: all 0.2s;
-  }
-  .tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
-  .tab:hover:not(.active) { color: #94a3b8; }
-
-  .tab-content { display: none; }
-  .tab-content.active { display: block; }
-
-  /* ── Contadores ── */
-  .stats-row {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 4px;
-  }
-  .stat-cell {
-    background: #1a1d2e; border-radius: 8px; padding: 12px;
-    border: 1px solid #1e2333; text-align: center;
-  }
-  .stat-num   { font-size: 22px; font-weight: 700; color: #3b82f6; }
-  .stat-label { font-size: 10px; color: #475569; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
-
-  /* ── Scenario badge ── */
-  .scenario-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: #1e293b; border: 1px solid #2d3748;
-    border-radius: 6px; padding: 5px 10px; font-size: 11px; color: #94a3b8;
-  }
-
-  .divider { height: 1px; background: #1e2333; }
+/* ── Alertas ── */
+.alerts-list { display: flex; flex-direction: column; gap: 8px; }
+.alert-item {
+  background: #1a1d2e; border-radius: 8px; padding: 12px 14px;
+  border-left: 3px solid #2d3748; display: flex;
+  align-items: center; justify-content: space-between; gap: 12px;
+}
+.alert-item.alerta  { border-left-color: #f59e0b; }
+.alert-item.critico { border-left-color: #ef4444; }
+.alert-msg  { font-size: 12px; color: #cbd5e1; }
+.alert-pool { font-size: 11px; color: #475569; margin-top: 2px; }
+.alert-time { font-size: 10px; color: #475569; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -268,10 +205,13 @@
     <div class="logo-icon">💧</div>
     <div>
       <div class="logo-text">AquaSensors</div>
-      <div class="logo-sub">Simulador de Sensores</div>
+      <div class="logo-sub">Simulador controlado v2</div>
     </div>
   </div>
-  <div id="status-badge">⏹ Detenido</div>
+  <div class="header-right">
+    <div id="modo-label" style="font-size:12px;color:#64748b;">Modo: —</div>
+    <div id="bombas-badge">Bombas OFF</div>
+  </div>
 </header>
 
 <div class="main">
@@ -279,42 +219,55 @@
   <!-- ══ SIDEBAR ══ -->
   <aside>
 
-    <!-- Escenario -->
+    <!-- Botones de modo -->
     <div>
-      <div class="section-title">Escenario</div>
-      <label>Tipo de simulación</label>
-      <select id="sel-escenario">
-        <option value="">Cargando...</option>
-      </select>
-      <div id="escenario-desc" style="font-size:11px;color:#64748b;margin-top:6px;line-height:1.5;"></div>
+      <div class="section-title">Modo de simulación</div>
+
+      <button class="modo-btn activo" id="btn-normal" onclick="cambiarModo('normal')">
+        <span class="ico">☀️</span>
+        <div class="info">
+          <div class="titulo">Día normal</div>
+          <div class="sub" id="sub-normal">T° amb 27°C · T° agua 27°C</div>
+        </div>
+      </button>
+
+      <button class="modo-btn" id="btn-lluvia" onclick="cambiarModo('lluvia')">
+        <span class="ico">🌧️</span>
+        <div class="info">
+          <div class="titulo">Día lluvioso</div>
+          <div class="sub" id="sub-lluvia">T° amb 18–20°C · T° agua 22–24°C</div>
+        </div>
+      </button>
     </div>
 
-    <!-- Albercas -->
+    <!-- Info clima actual -->
     <div>
-      <div class="section-title">Albercas</div>
-      <div id="pools-checkboxes" class="checkbox-group">
-        <div style="font-size:12px;color:#475569">Cargando albercas...</div>
+      <div class="section-title">Condiciones activas</div>
+      <div class="clima-info">
+        <div class="clima-row">
+          <span class="clima-key">T° ambiente</span>
+          <span class="clima-val" id="ci-tamb">27°C</span>
+        </div>
+        <div class="clima-row">
+          <span class="clima-key">T° agua</span>
+          <span class="clima-val" id="ci-tagua">27°C</span>
+        </div>
+        <div class="clima-row">
+          <span class="clima-key">Ciclos</span>
+          <span class="clima-val" id="ci-ciclos">0</span>
+        </div>
+        <div class="clima-row">
+          <span class="clima-key">Bombas dosif.</span>
+          <span class="clima-val" id="ci-bombas" style="color:#4ade80;">OFF</span>
+        </div>
       </div>
     </div>
-
-    <!-- Controles -->
-    <div>
-      <div class="section-title">Controles</div>
-      <div class="btn-group" style="margin-bottom:8px;">
-        <button class="btn btn-primary" id="btn-iniciar" onclick="cambiarEscenario()">⟳ Cambiar escenario</button>
-        <button class="btn btn-warning" id="btn-pausar" onclick="pausar()" disabled>⏸</button>
-        <button class="btn btn-danger"  id="btn-detener" onclick="detener()" disabled>⏹</button>
-      </div>
-      <button class="btn btn-ghost" style="width:100%;margin-top:4px;" onclick="reanudar()" id="btn-reanudar" disabled>▶ Reanudar</button>
-    </div>
-
-    <div class="divider"></div>
 
     <!-- Log -->
-    <div>
-      <div class="section-title">Log</div>
+    <div style="display:flex;flex-direction:column;flex:1;gap:6px;">
+      <div class="section-title">Registro</div>
       <div class="log-box" id="log-box">
-        <div class="log-line info">AquaSensors Simulator — corriendo automáticamente.</div>
+        <div class="log-line info">AquaSensors Simulador v2 — iniciando...</div>
       </div>
     </div>
 
@@ -323,7 +276,6 @@
   <!-- ══ CONTENIDO PRINCIPAL ══ -->
   <div class="content">
 
-    <!-- Stats row -->
     <div class="stats-row">
       <div class="stat-cell">
         <div class="stat-num" id="stat-ciclos">0</div>
@@ -331,91 +283,29 @@
       </div>
       <div class="stat-cell">
         <div class="stat-num" id="stat-alertas">0</div>
-        <div class="stat-label">Alertas activas</div>
+        <div class="stat-label">Alertas</div>
       </div>
       <div class="stat-cell">
         <div class="stat-num" id="stat-criticos">0</div>
         <div class="stat-label">Críticos</div>
-      </div>
-      <div class="stat-cell">
-        <div class="stat-num" id="stat-inv-bajo">0</div>
-        <div class="stat-label">Inv. bajo</div>
-      </div>
-    </div>
-
-    <!-- Condiciones actuales del clima -->
-    <div id="clima-card" style="background:#1a1d2e;border:1px solid #1e2333;border-radius:10px;padding:14px 18px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span id="clima-icon" style="font-size:20px;">🌤</span>
-        <div>
-          <div style="font-size:11px;color:#475569;text-transform:uppercase;letter-spacing:.05em;">Condición actual</div>
-          <div id="clima-desc" style="font-size:13px;font-weight:500;color:#e2e8f0;">Cargando...</div>
-        </div>
-      </div>
-      <div style="display:flex;gap:16px;flex-wrap:wrap;">
-        <div style="text-align:center;">
-          <div style="font-size:18px;font-weight:700;color:#f87171;" id="clima-tamb">—°C</div>
-          <div style="font-size:10px;color:#475569;">T. Ambiente</div>
-        </div>
-        <div style="text-align:center;">
-          <div style="font-size:18px;font-weight:700;color:#60a5fa;" id="clima-tagua">—°C</div>
-          <div style="font-size:10px;color:#475569;">T. Agua</div>
-        </div>
-        <div style="text-align:center;">
-          <div style="font-size:18px;font-weight:700;color:#fbbf24;" id="clima-uv">—</div>
-          <div style="font-size:10px;color:#475569;">UV</div>
-        </div>
-        <div style="text-align:center;">
-          <div style="font-size:18px;font-weight:700;color:#4ade80;" id="clima-uso">—%</div>
-          <div style="font-size:10px;color:#475569;">Uso alberca</div>
-        </div>
-        <div style="text-align:center;">
-          <div style="font-size:13px;font-weight:600;color:#a78bfa;" id="clima-escenario">—</div>
-          <div style="font-size:10px;color:#475569;">Escenario</div>
-        </div>
-        <div style="text-align:center;">
-          <div style="font-size:13px;font-weight:600;color:#94a3b8;" id="clima-hora">—:00h</div>
-          <div style="font-size:10px;color:#475569;">Hora real</div>
-        </div>
       </div>
     </div>
 
     <!-- Tabs -->
     <div class="tabs">
       <div class="tab active" onclick="showTab('albercas')">Albercas</div>
-      <div class="tab" onclick="showTab('inventario')">Inventario</div>
       <div class="tab" onclick="showTab('alertas')">Alertas</div>
     </div>
 
-    <!-- Tab: Albercas -->
     <div class="tab-content active" id="tab-albercas">
       <div class="pool-grid" id="pool-cards">
-        <div style="color:#475569;font-size:13px;padding:20px;">
-          Inicia una simulación para ver los datos en tiempo real.
-        </div>
+        <div style="color:#475569;font-size:13px;padding:20px;">Conectando al servidor...</div>
       </div>
     </div>
 
-    <!-- Tab: Inventario -->
-    <div class="tab-content" id="tab-inventario">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
-        <button class="btn btn-success" style="width:auto;padding:7px 16px;" onclick="reponerTodo()">
-          + Reponer todo al 100%
-        </button>
-      </div>
-      <div class="inventario-grid" id="inventario-grid">
-        <div style="color:#475569;font-size:13px;padding:20px;">
-          Cargando inventario...
-        </div>
-      </div>
-    </div>
-
-    <!-- Tab: Alertas -->
     <div class="tab-content" id="tab-alertas">
       <div class="alerts-list" id="alerts-list">
-        <div style="color:#475569;font-size:13px;padding:20px;">
-          Sin alertas recientes.
-        </div>
+        <div style="color:#475569;font-size:13px;padding:20px;">Sin alertas recientes.</div>
       </div>
     </div>
 
@@ -423,386 +313,131 @@
 </div>
 
 <script>
-// ═══════════════════════════════════════════════════════════════════
-// Estado global
-// ═══════════════════════════════════════════════════════════════════
-let poolsDisponibles = [];
-let escenariosDisponibles = [];
-let acelerado = false;
 let ws = null;
-let alertasCount = { alerta: 0, critico: 0 };
 
-// ── WebSocket ────────────────────────────────────────────────────
+// ── WebSocket ─────────────────────────────────────────────────────
 function conectarWS() {
-ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`);
-
-  ws.onopen = () => {
-    log('Conectado al servidor', 'success');
-  };
-
-  ws.onmessage = (e) => {
-    const data = JSON.parse(e.data);
-    actualizarEstado(data);
-  };
-
+  ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`);
+  ws.onopen  = () => log('Conectado al servidor', 'success');
+  ws.onmessage = (e) => actualizarEstado(JSON.parse(e.data));
   ws.onclose = () => {
-    log('Desconectado — reconectando en 3s...', 'warning');
+    log('Reconectando en 3s...', 'warning');
     setTimeout(conectarWS, 3000);
   };
 }
 
-// ── Cargar datos iniciales ────────────────────────────────────────
-async function cargarInicial() {
-  // Pools
-  const resPools = await fetch('/api/pools');
-  poolsDisponibles = await resPools.json();
-  renderPoolCheckboxes();
+// ── Cambiar modo ──────────────────────────────────────────────────
+async function cambiarModo(modo) {
+  log(`Cambiando a modo: ${modo}...`, 'info');
+  const res  = await fetch('/api/modo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ modo }),
+  });
+  const data = await res.json();
+  if (data.error) { log(data.error, 'error'); return; }
 
-  // Escenarios
-  const resEsc = await fetch('/api/scenarios');
-  escenariosDisponibles = await resEsc.json();
-  renderEscenarios();
+  // Actualizar botones
+  document.getElementById('btn-normal').classList.toggle('activo', modo === 'normal');
+  document.getElementById('btn-lluvia').classList.toggle('activo', modo === 'lluvia');
 
-  // Inventario
-  cargarInventario();
+  if (modo === 'lluvia') {
+    document.getElementById('sub-lluvia').textContent =
+      `T° amb ${data.tempAmbiente}°C · T° agua ${data.tempAgua}°C`;
+    log(`Modo LLUVIA activado | T°amb ${data.tempAmbiente}°C | T°agua ${data.tempAgua}°C | Bombas ON`, 'rain');
+  } else {
+    log('Modo NORMAL activado | T°amb 27°C | T°agua 27°C | Bombas OFF', 'success');
+  }
+}
+
+// ── Actualizar estado desde WS ────────────────────────────────────
+function actualizarEstado(data) {
+  const cond = data.condiciones;
+  if (!cond) return;
+
+  // Header
+  document.getElementById('modo-label').textContent = 'Modo: ' + (cond.modoNombre || '—');
+  const bb = document.getElementById('bombas-badge');
+  bb.textContent = cond.bombas ? 'Bombas ON' : 'Bombas OFF';
+  bb.className   = cond.bombas ? 'on' : '';
+
+  // Sidebar info
+  document.getElementById('ci-tamb').textContent   = cond.tempAmbiente + '°C';
+  document.getElementById('ci-tagua').textContent  = cond.tempAgua + '°C';
+  document.getElementById('ci-ciclos').textContent = data.ciclosHechos || 0;
+  const bc = document.getElementById('ci-bombas');
+  bc.textContent  = cond.bombas ? 'ON' : 'OFF';
+  bc.style.color  = cond.bombas ? '#f87171' : '#4ade80';
+
+  // Stats
+  document.getElementById('stat-ciclos').textContent = data.ciclosHechos || 0;
+
+  // Cards
+  if (data.pools && data.pools.length > 0) renderPoolCards(data.pools);
 
   // Alertas
   cargarAlertas();
 }
 
-// ── Render checkboxes de albercas ─────────────────────────────────
-function renderPoolCheckboxes() {
-  const container = document.getElementById('pools-checkboxes');
-  container.innerHTML = poolsDisponibles.map(p => `
-    <label class="checkbox-item">
-      <input type="checkbox" value="${p.id}" checked>
-      <span>${p.nombre}<br><span style="color:#475569;font-size:10px;">${(p.volumen_litros/1000).toLocaleString('es-MX')} m³</span></span>
-    </label>
-  `).join('');
-}
-
-// ── Render select de escenarios ────────────────────────────────────
-function renderEscenarios() {
-  const sel = document.getElementById('sel-escenario');
-  sel.innerHTML = escenariosDisponibles.map(e =>
-    `<option value="${e.key}">${e.nombre} (${e.temp_min}-${e.temp_max}°C)</option>`
-  ).join('');
-  actualizarDescEscenario();
-  sel.addEventListener('change', actualizarDescEscenario);
-}
-
-function actualizarDescEscenario() {
-  const key = document.getElementById('sel-escenario').value;
-  const esc = escenariosDisponibles.find(e => e.key === key);
-  document.getElementById('escenario-desc').textContent = esc ? esc.descripcion : '';
-}
-
-
-// ── Iniciar simulación ────────────────────────────────────────────
-async function cambiarEscenario() {
-  const poolIds = [...document.querySelectorAll('#pools-checkboxes input:checked')]
-    .map(i => i.value);
-  const escenario = document.getElementById('sel-escenario').value;
-  const ciclos    = parseInt(document.getElementById('inp-ciclos').value) || 0;
-
-  if (poolIds.length === 0) { log('Selecciona al menos una alberca', 'error'); return; }
-  if (!escenario)           { log('Selecciona un escenario', 'error'); return; }
-
-  log(`Iniciando: ${escenario} — ${poolIds.length} alberca(s)`, 'info');
-
-  const res = await fetch('/api/cambiar-escenario', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ escenario }),
-  });
-
-  const data = await res.json();
-  if (data.error) { log(data.error, 'error'); return; }
-  log('Simulación iniciada correctamente', 'success');
-}
-
-// ── Controles ─────────────────────────────────────────────────────
-async function pausar()   { await fetch('/api/pausar',   { method: 'POST' }); log('Pausado', 'warning'); }
-async function reanudar() { await fetch('/api/reanudar', { method: 'POST' }); log('Reanudado', 'success'); }
-async function detener()  {
-  await fetch('/api/detener', { method: 'POST' });
-  log('Simulación detenida', 'warning');
-}
-
-// ── Forzar valor ──────────────────────────────────────────────────
-async function forzarValor(poolId, parametro, inputId) {
-  const valor = document.getElementById(inputId).value;
-  if (!valor) return;
-  await fetch('/api/forzar', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pool_id: poolId, parametro, valor }),
-  });
-  log(`Forzado ${parametro}=${valor} en pool`, 'warning');
-}
-
-// ── Generador de condiciones aleatorias locales (fallback) ─────────
-// Se usa cuando el servidor aún no ha mandado condiciones reales
-const _PERFIL_HORAS = {
-  0:{tb:-6,uv:0,uso:0.05,desc:'Madrugada'}, 1:{tb:-6.5,uv:0,uso:0.03,desc:'Madrugada'},
-  2:{tb:-7,uv:0,uso:0.02,desc:'Madrugada'}, 3:{tb:-7.2,uv:0,uso:0.02,desc:'Madrugada'},
-  4:{tb:-7,uv:0,uso:0.02,desc:'Madrugada'}, 5:{tb:-6.5,uv:0,uso:0.05,desc:'Amanecer'},
-  6:{tb:-5,uv:0.1,uso:0.10,desc:'Amanecer'}, 7:{tb:-3,uv:0.3,uso:0.20,desc:'Mañana temprana'},
-  8:{tb:-1,uv:0.5,uso:0.35,desc:'Mañana'}, 9:{tb:1,uv:0.7,uso:0.50,desc:'Mañana'},
-  10:{tb:2.5,uv:0.9,uso:0.70,desc:'Media mañana'}, 11:{tb:3.5,uv:1.0,uso:0.85,desc:'Pico UV'},
-  12:{tb:4,uv:1.0,uso:0.90,desc:'Mediodía'}, 13:{tb:4.2,uv:1.0,uso:0.95,desc:'Mediodía — pico'},
-  14:{tb:4.5,uv:0.9,uso:1.00,desc:'Tarde — pico'}, 15:{tb:4,uv:0.8,uso:0.95,desc:'Tarde'},
-  16:{tb:3.5,uv:0.6,uso:0.90,desc:'Tarde'}, 17:{tb:2.5,uv:0.4,uso:0.80,desc:'Tarde-noche'},
-  18:{tb:1.5,uv:0.2,uso:0.65,desc:'Atardecer'}, 19:{tb:0,uv:0,uso:0.45,desc:'Noche'},
-  20:{tb:-1.5,uv:0,uso:0.30,desc:'Noche'}, 21:{tb:-3,uv:0,uso:0.20,desc:'Noche'},
-  22:{tb:-4,uv:0,uso:0.10,desc:'Noche'}, 23:{tb:-5,uv:0,uso:0.07,desc:'Noche'},
-};
-const _TEMP_MES = {1:25,2:26,3:28,4:30,5:33,6:34,7:33,8:33,9:32,10:30,11:27,12:25};
-const _PROB_LLUVIA = {1:0.03,2:0.03,3:0.05,4:0.08,5:0.15,6:0.35,7:0.50,8:0.55,9:0.45,10:0.25,11:0.10,12:0.05};
-
-let _condLocal = null; // cache condiciones locales del día
-
-function _generarCondicionesLocales() {
-  const ahora = new Date();
-  const hora  = ahora.getHours();
-  const mes   = ahora.getMonth() + 1;
-  const dia   = ahora.getDate();
-
-  // Recalcular si es un día nuevo o no existe
-  if (!_condLocal || _condLocal._dia !== dia) {
-    const tempBaseHoy = _TEMP_MES[mes] + (Math.random() * 6 - 3);
-    const llueveHoy   = Math.random() < (_PROB_LLUVIA[mes] || 0.1);
-    const horaLluvia  = llueveHoy ? 12 + Math.floor(Math.random() * 8) : -1;
-    const durLluvia   = llueveHoy ? 2 + Math.floor(Math.random() * 4) : 0;
-    const esFinde     = ahora.getDay() === 0 || ahora.getDay() === 6;
-    _condLocal = { _dia: dia, tempBaseHoy, llueveHoy, horaLluvia, durLluvia, esFinde };
-  }
-
-  const p = _PERFIL_HORAS[hora];
-  const estaLloviendo = _condLocal.llueveHoy &&
-    hora >= _condLocal.horaLluvia &&
-    hora <  _condLocal.horaLluvia + _condLocal.durLluvia;
-
-  let tempAmbiente = _condLocal.tempBaseHoy + p.tb;
-  if (estaLloviendo) tempAmbiente -= 4;
-  tempAmbiente += (Math.random() * 2 - 1);
-  tempAmbiente = Math.round(tempAmbiente * 10) / 10;
-
-  const factorUV  = estaLloviendo ? 0 : Math.round(p.uv * (0.85 + Math.random() * 0.3) * 100) / 100;
-  const factorUso = Math.round(p.uso * (_condLocal.esFinde ? 1.3 : 1.0) * (0.9 + Math.random() * 0.2) * 100);
-  const tempAgua  = Math.round((tempAmbiente * 0.65 + 10) * 10) / 10;
-  const desc      = p.desc + (estaLloviendo ? ' 🌧' : '');
-
-  // Escenario
-  let escenario = 'Día Normal (22-26°C)';
-  if (estaLloviendo)       escenario = 'Lluvia Intensa';
-  else if (tempAmbiente > 35) escenario = 'Calor Extremo (38-42°C)';
-  else if (tempAmbiente < 20) escenario = 'Nublado / Frío (15-20°C)';
-  else if (factorUso > 85)    escenario = 'Uso Intensivo (fin de semana)';
-
-  return { hora, tempAmbiente, tempAgua, estaLloviendo, factorUV, factorUso, desc, escenario };
-}
-
-// ── Actualizar widget de clima ─────────────────────────────────────
-function actualizarClima(data) {
-  // Usar condiciones del servidor si existen, o generar localmente
-  let cond     = data.condiciones;
-  let escenario = data.escenario;
-  let hora     = data.horaReal != null ? data.horaReal : new Date().getHours();
-
-  if (!cond) {
-    // Generar condiciones aleatorias locales como fallback
-    const local  = _generarCondicionesLocales();
-    cond         = local;
-    escenario    = local.escenario;
-    hora         = local.hora;
-  }
-
-  const llueve = cond.estaLloviendo;
-  const icono  = llueve ? '🌧' : hora >= 20 || hora < 6 ? '🌙' : hora >= 18 ? '🌇' : cond.factorUV > 0.7 ? '☀️' : '⛅';
-
-  document.getElementById('clima-icon').textContent      = icono;
-  document.getElementById('clima-desc').textContent      = cond.desc || '—';
-  document.getElementById('clima-tamb').textContent      = cond.tempAmbiente + '°C';
-  document.getElementById('clima-tagua').textContent     = cond.tempAgua + '°C';
-  document.getElementById('clima-uv').textContent        = cond.factorUV;
-  document.getElementById('clima-uso').textContent       = (cond.factorUso || 0) + '%';
-  document.getElementById('clima-escenario').textContent = escenario || '—';
-  document.getElementById('clima-hora').textContent      = String(hora).padStart(2,'0') + ':00h';
-
-  // Color de temperatura según nivel
-  const tEl = document.getElementById('clima-tamb');
-  tEl.style.color = cond.tempAmbiente > 35 ? '#f87171' : cond.tempAmbiente > 28 ? '#fbbf24' : '#60a5fa';
-}
-
-// ── Actualizar estado desde WebSocket ────────────────────────────
-function actualizarEstado(data) {
-  // Badge de estado
-  const badge = document.getElementById('status-badge');
-  if (data.corriendo && data.acelerado) {
-    badge.textContent = '⚡ Acelerado';
-    badge.className = 'acelerado';
-  } else if (data.corriendo) {
-    badge.textContent = '▶ Corriendo';
-    badge.className = 'corriendo';
-  } else {
-    badge.textContent = '⏹ Detenido';
-    badge.className = '';
-  }
-
-  // Botones
-  document.getElementById('btn-iniciar').disabled  = false;
-  document.getElementById('btn-pausar').disabled   = !data.corriendo;
-  document.getElementById('btn-detener').disabled  = !data.corriendo && !data.sesionId;
-  document.getElementById('btn-reanudar').disabled = data.corriendo || !data.sesionId;
-
-  // Stats
-  document.getElementById('stat-ciclos').textContent = data.ciclosHechos || 0;
-
-  // Actualizar clima
-  actualizarClima(data);
-
-  // Cards de alberca
-  if (data.pools && data.pools.length > 0) {
-    renderPoolCards(data.pools);
-  }
-
-  // Recargar inventario y alertas cada ciclo
-  cargarInventario();
-  cargarAlertas();
-}
-
-// ── Render cards de albercas ──────────────────────────────────────
+// ── Render pool cards ─────────────────────────────────────────────
 function renderPoolCards(pools) {
-  const container = document.getElementById('pool-cards');
-  container.innerHTML = pools.map(pool => {
-    const hora = String(pool.hora_simulada).padStart(2, '0') + ':00';
+  document.getElementById('pool-cards').innerHTML = pools.map(pool => {
+    const nivel = nivelCard(pool);
     return `
-    <div class="pool-card ${nivelCard(pool)}" id="card-${pool.pool_id}">
+    <div class="pool-card ${nivel}">
       <div class="pool-header">
         <div class="pool-nombre">${pool.nombre}</div>
-        <div class="pool-ciclo">Ciclo ${pool.ciclo} · ${hora}h sim.</div>
+        <div class="pool-ciclo">Ciclo ${pool.ciclo}</div>
       </div>
-
       <div class="params-grid">
-        ${paramCell('Cloro', pool.cloro, 'ppm', 'cloro', 1.0, 3.0)}
-        ${paramCell('pH', pool.ph, '', 'ph', 7.2, 7.8)}
-        ${paramCell('Alcalinidad', pool.alcalinidad, 'ppm', 'alcalinidad', 80, 150)}
-        ${paramCell('Turbidez', pool.turbidez, 'NTU', 'turbidez', 0, 1.0, true)}
+        ${paramCell('Cloro', pool.cloro, 'ppm', stCloro(pool.cloro))}
+        ${paramCell('pH', pool.ph, '', stPh(pool.ph))}
+        ${paramCell('Turbidez / Alguicida', pool.turbidez, 'NTU', stTurb(pool.turbidez))}
+        ${paramCell('Clarificador', pool.turbidez > 1.0 ? 'Bajo' : 'Normal', '', pool.turbidez > 1.0 ? 'alerta' : 'optimo')}
       </div>
-
       <div class="temp-row">
         <div class="temp-cell">
-          <span class="label">T° Agua</span>
+          <span class="label">T° agua</span>
           <span class="valor">${pool.temp_agua}°C</span>
         </div>
         <div class="temp-cell">
-          <span class="label">T° Ambiente</span>
+          <span class="label">T° ambiente</span>
           <span class="valor">${pool.temp_ambiente}°C</span>
         </div>
       </div>
-
-      <div class="forzar-section">
-        <div class="forzar-title">Forzar valores</div>
-        <div class="forzar-grid">
-          ${forzarInput(pool.pool_id, 'cloro', 'Cloro')}
-          ${forzarInput(pool.pool_id, 'ph', 'pH')}
-          ${forzarInput(pool.pool_id, 'alcalinidad', 'Alc.')}
-          ${forzarInput(pool.pool_id, 'turbidez', 'Turb.')}
-        </div>
+      <div class="bomba-row">
+        <span>Microbombas dosificación</span>
+        <span class="${pool.bombas ? 'bomba-on' : 'bomba-off'}">${pool.bombas ? 'ON' : 'OFF'}</span>
       </div>
-    </div>
-    `;
+    </div>`;
   }).join('');
 }
 
-function paramCell(label, valor, unit, tipo, min, max, invertido = false) {
-  let cls = 'val-optimo';
-  if (invertido) {
-    cls = valor > max ? 'val-alerta' : 'val-optimo';
-    if (valor > max * 2) cls = 'val-critico';
-  } else {
-    if (valor < min || valor > max) cls = 'val-alerta';
-    if (valor < min * 0.85 || valor > max * 1.1) cls = 'val-critico';
-  }
+function paramCell(label, valor, unit, st) {
+  const cls = st === 'optimo' ? 'val-optimo' : st === 'alerta' ? 'val-alerta' : 'val-critico';
+  const stLabel = st === 'optimo' ? 'Óptimo' : st === 'alerta' ? 'Alerta' : 'Crítico';
   return `
     <div class="param-cell">
       <div class="param-label">${label}</div>
       <div class="param-valor ${cls}">${valor}</div>
       <div class="param-unit">${unit}</div>
-    </div>
-  `;
+      <div class="param-status ${cls}">${stLabel}</div>
+    </div>`;
 }
 
-function forzarInput(poolId, param, label) {
-  const inputId = `inp-${poolId.slice(0,8)}-${param}`;
-  return `
-    <div class="forzar-item">
-      <input type="number" id="${inputId}" placeholder="${label}" step="0.1">
-      <button onclick="forzarValor('${poolId}','${param}','${inputId}')">Set</button>
-    </div>
-  `;
-}
-
-function nivelCard(pool) {
-  if (pool.cloro < 0.5 || pool.ph < 6.8 || pool.ph > 8.2 || pool.turbidez > 4) return 'critico';
-  if (pool.cloro < 1.0 || pool.ph < 7.2 || pool.ph > 7.8 || pool.turbidez > 1) return 'alerta';
+function stCloro(v) { return v < 0.5 || v > 5.0 ? 'critico' : v < 1.0 || v > 3.0 ? 'alerta' : 'optimo'; }
+function stPh(v)    { return v < 6.8 || v > 8.2 ? 'critico' : v < 7.2 || v > 7.8 ? 'alerta' : 'optimo'; }
+function stTurb(v)  { return v > 4.0 ? 'critico' : v > 1.0 ? 'alerta' : 'optimo'; }
+function nivelCard(p) {
+  if (p.cloro < 0.5 || p.ph < 6.8 || p.ph > 8.2 || p.turbidez > 4) return 'critico';
+  if (p.cloro < 1.0 || p.ph < 7.2 || p.ph > 7.8 || p.turbidez > 1) return 'alerta';
   return '';
-}
-
-// ── Inventario ────────────────────────────────────────────────────
-async function cargarInventario() {
-  const res = await fetch('/api/inventario');
-  const data = await res.json();
-
-  let bajosCount = 0;
-  const container = document.getElementById('inventario-grid');
-  container.innerHTML = data.map(item => {
-    const pct  = item.pct;
-    const bajo = pct <= 20;
-    if (bajo) bajosCount++;
-    const color = pct > 50 ? '#4ade80' : pct > 20 ? '#fbbf24' : '#f87171';
-    return `
-      <div class="inv-card">
-        <div class="inv-header">
-          <div>
-            <div class="inv-nombre">${item.quimico_nombre}</div>
-            <div class="inv-pool">${item.pool_nombre || item.pool_id.slice(0,8)}</div>
-          </div>
-          <div class="inv-pct" style="color:${color}">${pct}%</div>
-        </div>
-        <div class="inv-bar">
-          <div class="inv-fill" style="width:${pct}%;background:${color}"></div>
-        </div>
-        <div class="inv-detail">
-          ${item.nivel_actual_litros.toFixed(1)}L de ${item.capacidad_max_litros}L
-          ${bajo ? ' · ⚠ Reabastecer' : ''}
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  document.getElementById('stat-inv-bajo').textContent = bajosCount;
-}
-
-// ── Reponer inventario ────────────────────────────────────────────
-async function reponerTodo() {
-  for (const pool of poolsDisponibles) {
-    await fetch('/api/inventario/reset', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pool_id: pool.id }),
-    });
-  }
-  log('Inventario repuesto al 100% en todas las albercas', 'success');
-  cargarInventario();
 }
 
 // ── Alertas ───────────────────────────────────────────────────────
 async function cargarAlertas() {
-  const res = await fetch('/api/alertas');
+  const res  = await fetch('/api/alertas');
   const data = await res.json();
-
   let alertaCount = 0, criticoCount = 0;
   data.forEach(a => {
     if (!a.resuelta) {
@@ -810,20 +445,17 @@ async function cargarAlertas() {
       else alertaCount++;
     }
   });
-
-  document.getElementById('stat-alertas').textContent = alertaCount + criticoCount;
+  document.getElementById('stat-alertas').textContent  = alertaCount + criticoCount;
   document.getElementById('stat-criticos').textContent = criticoCount;
 
   const container = document.getElementById('alerts-list');
-  if (data.length === 0) {
+  if (!data.length) {
     container.innerHTML = '<div style="color:#475569;font-size:13px;padding:20px;">Sin alertas recientes.</div>';
     return;
   }
-
   container.innerHTML = data.map(a => {
-    const fecha = new Date(a.created_at).toLocaleString('es-MX', {
-      hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit'
-    });
+    const fecha = new Date(a.created_at).toLocaleString('es-MX',
+      { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
     return `
       <div class="alert-item ${a.nivel}">
         <div>
@@ -831,48 +463,35 @@ async function cargarAlertas() {
           <div class="alert-pool">${a.pools?.nombre || ''} · ${a.parametro}</div>
         </div>
         <div class="alert-time">${fecha}</div>
-      </div>
-    `;
+      </div>`;
   }).join('');
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────
 function showTab(name) {
   document.querySelectorAll('.tab').forEach((t, i) => {
-    const names = ['albercas', 'inventario', 'alertas'];
-    t.classList.toggle('active', names[i] === name);
+    t.classList.toggle('active', ['albercas','alertas'][i] === name);
   });
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   document.getElementById(`tab-${name}`).classList.add('active');
-  if (name === 'inventario') cargarInventario();
-  if (name === 'alertas')    cargarAlertas();
+  if (name === 'alertas') cargarAlertas();
 }
 
 // ── Log ───────────────────────────────────────────────────────────
 function log(msg, tipo = 'log') {
-  const box = document.getElementById('log-box');
-  const hora = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  const div = document.createElement('div');
-  div.className = `log-line ${tipo}`;
+  const box  = document.getElementById('log-box');
+  const hora = new Date().toLocaleTimeString('es-MX',
+    { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const div  = document.createElement('div');
+  div.className   = `log-line ${tipo}`;
   div.textContent = `[${hora}] ${msg}`;
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
 }
 
 // ── Init ──────────────────────────────────────────────────────────
-cargarInicial();
 conectarWS();
-
-// Mostrar clima local inmediatamente al cargar (antes de que llegue el WS)
-actualizarClima({});
-
-// Refrescar clima local cada 60s si no hay WS activo
-setInterval(() => {
-  if (!ws || ws.readyState !== WebSocket.OPEN) actualizarClima({});
-}, 60000);
-
-// Refrescar alertas e inventario cada 15s aunque no haya ciclo nuevo
-setInterval(() => { cargarAlertas(); cargarInventario(); }, 15000);
+setInterval(cargarAlertas, 15000);
 </script>
 </body>
 </html>

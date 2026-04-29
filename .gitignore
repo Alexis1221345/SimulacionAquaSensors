@@ -24,3 +24,9 @@ Thumbs.db
 # Archivos de build
 dist/
 build/
+
+# Archivos multimedia y documentos personales
+*.jpg
+*.jpeg
+*.png
+*.pdf
