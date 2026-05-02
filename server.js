@@ -104,37 +104,32 @@ app.post('/api/modo', async (req, res) => {
   res.json({ ok: true, modo, tempAmbiente: cond.tempAmbiente, tempAgua: cond.tempAgua, bombas: cond.bombas });
 });
 
-// GET /api/modo — el ESP32 consulta este endpoint para saber si encender bombas
-app.get('/api/modo', (req, res) => {
+// ENDPOINT UNIFICADO: Datos de sensores + Estado de bombas
+app.get('/api/esp32/status', (req, res) => {
   const estado = scheduler.getEstadoCompleto();
-  const cond   = estado.condiciones;
+  const cond = estado.condiciones;
 
-  res.json({
-    modo:         cond.modoClima,
-    bombas:       cond.bombas,
-    tempAmbiente: cond.tempAmbiente,
-    tempAgua:     cond.tempAgua,
-    activar:      cond.bombas
-      ? ['cloro_liquido', 'alguicida', 'clarificador', 'carbonato_sodio']
-      : [],
-  });
-});
-
-// NUEVA RUTA SIMPLIFICADA PARA EL ESP32 (Solo 3 datos)
-app.get('/api/esp32/simplificado', (req, res) => {
-  const estado = scheduler.getEstadoCompleto();
   if (estado.pools && estado.pools.length > 0) {
-    // Tomamos la primera alberca: Aqua Sensrs
+    // Tomamos la primera alberca (Aqua Sensrs)
     const p = estado.pools[0]; 
+
     res.json({
+      // Datos de los sensores
       cloro: p.cloro,
       ph: p.ph,
-      turbidez: p.turbidez
+      turbidez: p.turbidez,
+      tempAgua: p.temp_agua,
+      
+      // Lógica de control
+      modo: cond.modoClima,
+      bombas: cond.bombas,
+      activar: cond.bombas 
+        ? ['cloro_liquido', 'alguicida', 'clarificador', 'carbonato_sodio'] 
+        : []
     });
   } else {
     res.status(404).json({ error: "No hay albercas activas" });
   }
-  
 });
 // GET /api/alertas
 app.get('/api/alertas', async (req, res) => {
