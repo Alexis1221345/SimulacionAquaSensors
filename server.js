@@ -120,6 +120,22 @@ app.get('/api/modo', (req, res) => {
   });
 });
 
+// NUEVA RUTA SIMPLIFICADA PARA EL ESP32 (Solo 3 datos)
+app.get('/api/esp32/simplificado', (req, res) => {
+  const estado = scheduler.getEstadoCompleto();
+  if (estado.pools && estado.pools.length > 0) {
+    // Tomamos la primera alberca: Aqua Sensrs
+    const p = estado.pools[0]; 
+    res.json({
+      cloro: p.cloro,
+      ph: p.ph,
+      turbidez: p.turbidez
+    });
+  } else {
+    res.status(404).json({ error: "No hay albercas activas" });
+  }
+  
+});
 // GET /api/alertas
 app.get('/api/alertas', async (req, res) => {
   const { data, error } = await supabase
