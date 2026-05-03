@@ -3,199 +3,285 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AquaSensors — Simulador</title>
+<title>AquaSensors — Panel Dinámico</title>
 <style>
+:root {
+  /* Paleta de colores vibrantes y fondos profundos */
+  --bg-dark: #05070e;
+  --bg-panel: #101421;
+  --bg-card: #151a2a;
+  --border-light: #232a3e;
+  
+  --brand-gradient: linear-gradient(135deg, #00f2fe, #4facfe);
+  --text-main: #f1f5f9;
+  --text-muted: #8b9bb4;
+  
+  --optimo: #00e676; /* Verde neón */
+  --optimo-glow: rgba(0, 230, 118, 0.2);
+  
+  --alerta: #ff9100; /* Naranja vibrante */
+  --alerta-glow: rgba(255, 145, 0, 0.2);
+  
+  --critico: #ff1744; /* Rojo brillante */
+  --critico-glow: rgba(255, 23, 68, 0.3);
+
+  --accent-blue: #2979ff;
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: #0f1117;
-  color: #e2e8f0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg-dark);
+  color: var(--text-main);
   min-height: 100vh;
   font-size: 14px;
+  overflow: hidden; /* Evita doble scroll */
 }
+
+/* ── Custom Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-dark); }
+::-webkit-scrollbar-thumb { background: #2a344d; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent-blue); }
 
 /* ── Header ── */
 header {
-  background: #1a1d2e;
-  border-bottom: 1px solid #2d3748;
-  padding: 14px 24px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-light);
+  padding: 16px 28px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  position: relative;
+  z-index: 10;
 }
-.logo { display: flex; align-items: center; gap: 10px; }
+.logo { display: flex; align-items: center; gap: 12px; }
 .logo-icon {
-  width: 32px; height: 32px; border-radius: 8px;
-  background: linear-gradient(135deg, #3b82f6, #06b6d4);
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--brand-gradient);
   display: flex; align-items: center; justify-content: center;
-  font-size: 16px;
+  font-size: 18px;
+  box-shadow: 0 0 15px rgba(0, 242, 254, 0.4);
 }
-.logo-text { font-size: 16px; font-weight: 600; color: #f1f5f9; }
-.logo-sub  { font-size: 11px; color: #64748b; margin-top: 1px; }
+.logo-text { font-size: 18px; font-weight: 700; letter-spacing: 0.5px; }
+.logo-sub  { font-size: 11px; color: var(--accent-blue); text-transform: uppercase; font-weight: 600; letter-spacing: 1px; }
 
-.header-right { display: flex; align-items: center; gap: 10px; }
+.header-right { display: flex; align-items: center; gap: 16px; }
 
 #bombas-badge {
-  padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
-  background: #052e16; color: #4ade80; border: 1px solid #166534;
-  transition: all 0.3s; letter-spacing: 0.02em;
+  padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 700;
+  background: rgba(0, 230, 118, 0.1); color: var(--optimo); border: 1px solid var(--optimo);
+  text-transform: uppercase; letter-spacing: 1px;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
-#bombas-badge.on { background: #450a0a; color: #f87171; border-color: #7f1d1d; }
+#bombas-badge.on { 
+  background: rgba(255, 23, 68, 0.1); color: var(--critico); border-color: var(--critico); 
+  box-shadow: 0 0 15px var(--critico-glow);
+  animation: pulse-badge 1.5s infinite;
+}
 
 /* ── Layout ── */
-.main { display: grid; grid-template-columns: 280px 1fr; gap: 0; min-height: calc(100vh - 57px); }
+.main { display: grid; grid-template-columns: 300px 1fr; gap: 0; height: calc(100vh - 69px); }
 
 /* ── Sidebar ── */
 aside {
-  background: #13151f;
-  border-right: 1px solid #1e2333;
-  padding: 20px 16px;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border-light);
+  padding: 24px 20px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
+  overflow-y: auto;
 }
 
 .section-title {
-  font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
-  color: #475569; text-transform: uppercase; margin-bottom: 10px;
+  font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+  color: var(--text-muted); text-transform: uppercase; margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-title::after {
+  content: ''; flex: 1; height: 1px; background: var(--border-light);
 }
 
 /* ── Botones de modo ── */
 .modo-btn {
-  width: 100%; padding: 16px 12px; border-radius: 10px;
-  border: 2px solid transparent; cursor: pointer;
-  font-size: 14px; font-weight: 600; transition: all 0.2s;
-  display: flex; align-items: center; gap: 10px;
-  margin-bottom: 8px;
+  width: 100%; padding: 16px; border-radius: 12px;
+  background: var(--bg-card); border: 1px solid var(--border-light);
+  cursor: pointer; color: var(--text-muted);
+  transition: all 0.3s ease; display: flex; align-items: center; gap: 14px;
+  margin-bottom: 10px; position: relative; overflow: hidden;
 }
-.modo-btn .ico { font-size: 22px; }
+.modo-btn .ico { font-size: 24px; transition: transform 0.3s; }
 .modo-btn .info { text-align: left; }
-.modo-btn .info .titulo { font-size: 14px; font-weight: 600; }
-.modo-btn .info .sub { font-size: 11px; margin-top: 2px; opacity: 0.75; }
+.modo-btn .info .titulo { font-size: 14px; font-weight: 700; color: var(--text-main); transition: color 0.3s;}
+.modo-btn .info .sub { font-size: 11px; margin-top: 4px; opacity: 0.8; }
 
-#btn-normal {
-  background: #1e2b42; color: #93c5fd; border-color: #1e3a5f;
-}
+.modo-btn:hover { transform: translateY(-2px); border-color: #3b4b6b; }
+.modo-btn:hover .ico { transform: scale(1.1); }
+
 #btn-normal.activo {
-  background: #1d3a6e; color: #bfdbfe; border-color: #3b82f6;
-  box-shadow: 0 0 0 1px #3b82f6;
+  background: rgba(41, 121, 255, 0.1); border-color: var(--accent-blue);
+  box-shadow: 0 0 20px rgba(41, 121, 255, 0.15);
 }
-#btn-normal:hover:not(.activo) { border-color: #2d5a9e; }
+#btn-normal.activo .ico { text-shadow: 0 0 10px rgba(255,255,255,0.5); }
 
-#btn-lluvia {
-  background: #1e1b42; color: #c4b5fd; border-color: #2e2060;
-}
 #btn-lluvia.activo {
-  background: #3b1d6e; color: #ddd6fe; border-color: #7c3aed;
-  box-shadow: 0 0 0 1px #7c3aed;
+  background: rgba(142, 36, 170, 0.15); border-color: #ab47bc;
+  box-shadow: 0 0 20px rgba(142, 36, 170, 0.2);
 }
-#btn-lluvia:hover:not(.activo) { border-color: #5b21b6; }
+#btn-lluvia.activo .titulo { color: #e1bee7; }
 
 /* ── Info clima ── */
 .clima-info {
-  background: #1a1d2e; border: 1px solid #1e2333; border-radius: 8px;
-  padding: 12px 14px;
+  background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 12px;
+  padding: 16px; display: flex; flex-direction: column; gap: 10px;
 }
-.clima-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-.clima-row:last-child { margin-bottom: 0; }
-.clima-key { font-size: 11px; color: #64748b; }
-.clima-val { font-size: 13px; font-weight: 600; color: #e2e8f0; }
+.clima-row { display: flex; justify-content: space-between; align-items: center; }
+.clima-key { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+.clima-val { font-size: 14px; font-weight: 700; color: var(--text-main); }
 
 /* ── Log ── */
 .log-box {
-  background: #0d0f17; border: 1px solid #1e2333; border-radius: 8px;
-  padding: 12px; height: 200px; overflow-y: auto; font-family: monospace;
-  font-size: 11px; line-height: 1.7; flex: 1;
+  background: var(--bg-dark); border: 1px solid var(--border-light); border-radius: 12px;
+  padding: 14px; height: 220px; overflow-y: auto; font-family: 'Courier New', Courier, monospace;
+  font-size: 11px; line-height: 1.8; display: flex; flex-direction: column; gap: 4px;
 }
-.log-line { color: #64748b; }
-.log-line.info    { color: #60a5fa; }
-.log-line.success { color: #4ade80; }
-.log-line.warning { color: #fbbf24; }
-.log-line.error   { color: #f87171; }
-.log-line.rain    { color: #a78bfa; }
+.log-line { padding-left: 8px; border-left: 2px solid transparent; }
+.log-line.info    { color: #64b5f6; border-color: #64b5f6; }
+.log-line.success { color: var(--optimo); border-color: var(--optimo); }
+.log-line.warning { color: var(--alerta); border-color: var(--alerta); }
+.log-line.error   { color: var(--critico); border-color: var(--critico); background: rgba(255,23,68,0.05); }
+.log-line.rain    { color: #ce93d8; border-color: #ce93d8; }
 
-/* ── Contenido ── */
-.content { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+/* ── Contenido Principal ── */
+.content { padding: 28px; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; }
 
 /* ── Stats ── */
-.stats-row {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
-}
+.stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .stat-cell {
-  background: #1a1d2e; border-radius: 8px; padding: 12px;
-  border: 1px solid #1e2333; text-align: center;
+  background: var(--bg-panel); border-radius: 16px; padding: 20px;
+  border: 1px solid var(--border-light); text-align: left;
+  display: flex; align-items: center; justify-content: space-between;
+  transition: transform 0.3s, box-shadow 0.3s;
 }
-.stat-num   { font-size: 22px; font-weight: 700; color: #3b82f6; }
-.stat-label { font-size: 10px; color: #475569; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
+.stat-cell:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+.stat-data { display: flex; flex-direction: column; }
+.stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-bottom: 4px; }
+.stat-num   { font-size: 28px; font-weight: 800; background: var(--brand-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
 /* ── Tabs ── */
-.tabs { display: flex; gap: 4px; border-bottom: 1px solid #1e2333; margin-bottom: 16px; }
+.tabs { display: flex; gap: 12px; border-bottom: 2px solid var(--border-light); padding-bottom: 8px; }
 .tab {
-  padding: 8px 16px; font-size: 12px; font-weight: 500; cursor: pointer;
-  color: #64748b; border-bottom: 2px solid transparent; margin-bottom: -1px;
-  transition: all 0.2s;
+  padding: 8px 16px; font-size: 14px; font-weight: 600; cursor: pointer;
+  color: var(--text-muted); border-radius: 8px;
+  transition: all 0.3s; position: relative;
 }
-.tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
-.tab:hover:not(.active) { color: #94a3b8; }
-.tab-content { display: none; }
+.tab.active { color: var(--text-main); background: var(--border-light); }
+.tab::after {
+  content: ''; position: absolute; bottom: -10px; left: 0; width: 100%; height: 2px;
+  background: var(--accent-blue); transform: scaleX(0); transition: transform 0.3s;
+}
+.tab.active::after { transform: scaleX(1); }
+.tab:hover:not(.active) { color: var(--text-main); background: rgba(255,255,255,0.05); }
+
+.tab-content { display: none; animation: fadeIn 0.4s ease forwards; }
 .tab-content.active { display: block; }
 
 /* ── Pool cards ── */
-.pool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+.pool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
 .pool-card {
-  background: #1a1d2e; border: 1px solid #1e2333; border-radius: 12px; padding: 16px;
-  transition: border-color 0.3s;
+  background: var(--bg-panel); border: 1px solid var(--border-light); border-radius: 16px; padding: 20px;
+  position: relative; overflow: hidden; transition: all 0.3s;
 }
-.pool-card.alerta  { border-color: #f59e0b; }
-.pool-card.critico { border-color: #ef4444; }
-.pool-header {
-  display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
-}
-.pool-nombre { font-size: 13px; font-weight: 600; color: #f1f5f9; }
-.pool-ciclo  { font-size: 11px; color: #475569; }
+.pool-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(0,0,0,0.4); }
 
-.params-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+/* Deco superior de la tarjeta */
+.pool-card::before {
+  content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: var(--accent-blue); transition: all 0.3s;
+}
+.pool-card.alerta::before  { background: var(--alerta); }
+.pool-card.critico::before { background: var(--critico); }
+
+.pool-card.alerta  { border-color: rgba(255, 145, 0, 0.4); box-shadow: 0 0 20px var(--alerta-glow); }
+.pool-card.critico { 
+  border-color: rgba(255, 23, 68, 0.5); 
+  animation: pulse-critical 2s infinite; 
+}
+
+.pool-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.pool-nombre { font-size: 16px; font-weight: 700; color: var(--text-main); letter-spacing: 0.5px; }
+.pool-ciclo  { font-size: 11px; font-weight: 600; padding: 4px 10px; background: var(--bg-dark); border-radius: 20px; color: var(--accent-blue); }
+
+.params-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .param-cell {
-  background: #0f1117; border-radius: 8px; padding: 10px; border: 1px solid #1e2333;
+  background: var(--bg-dark); border-radius: 12px; padding: 14px; border: 1px solid var(--border-light);
+  display: flex; flex-direction: column; align-items: flex-start; transition: all 0.3s;
 }
-.param-label  { font-size: 10px; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; }
-.param-valor  { font-size: 20px; font-weight: 700; margin: 2px 0; }
-.param-unit   { font-size: 10px; color: #475569; }
-.param-status { font-size: 10px; margin-top: 4px; font-weight: 500; }
-.val-optimo   { color: #4ade80; }
-.val-alerta   { color: #fbbf24; }
-.val-critico  { color: #f87171; }
+.param-cell:hover { border-color: #3b4b6b; }
 
-.temp-row { display: flex; gap: 8px; margin-top: 8px; }
+.param-label  { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+.param-valor  { font-size: 24px; font-weight: 800; margin: 4px 0; font-variant-numeric: tabular-nums; display: flex; align-items: baseline; gap: 4px; }
+.param-unit   { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+.param-status { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; padding: 2px 6px; border-radius: 4px; margin-top: auto; }
+
+/* Estados de Valores */
+.val-optimo  { color: var(--optimo); text-shadow: 0 0 10px var(--optimo-glow); }
+.val-alerta  { color: var(--alerta); text-shadow: 0 0 10px var(--alerta-glow); }
+.val-critico { color: var(--critico); text-shadow: 0 0 10px var(--critico-glow); }
+
+.st-bg-optimo  { background: rgba(0,230,118,0.1); color: var(--optimo); }
+.st-bg-alerta  { background: rgba(255,145,0,0.1); color: var(--alerta); }
+.st-bg-critico { background: rgba(255,23,68,0.1); color: var(--critico); animation: blink 1.5s infinite;}
+
+.temp-row { display: flex; gap: 12px; margin-top: 16px; }
 .temp-cell {
-  flex: 1; background: #0f1117; border-radius: 8px; padding: 8px 10px;
-  border: 1px solid #1e2333; display: flex; align-items: center; justify-content: space-between;
+  flex: 1; background: transparent; border-radius: 10px; padding: 10px;
+  border: 1px dashed var(--border-light); display: flex; align-items: center; justify-content: space-between;
 }
-.temp-cell .label { font-size: 10px; color: #475569; }
-.temp-cell .valor { font-size: 14px; font-weight: 600; color: #60a5fa; }
+.temp-cell .label { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+.temp-cell .valor { font-size: 14px; font-weight: 700; color: #81d4fa; }
 
 .bomba-row {
-  margin-top: 8px; padding: 7px 10px; border-radius: 6px;
+  margin-top: 16px; padding: 12px 14px; border-radius: 10px;
   display: flex; align-items: center; justify-content: space-between;
-  font-size: 11px; font-weight: 500;
-  background: #0f1117; border: 1px solid #1e2333;
+  font-size: 12px; font-weight: 600;
+  background: var(--bg-dark); border: 1px solid var(--border-light);
 }
-.bomba-off { color: #4ade80; }
-.bomba-on  { color: #f87171; }
+.bomba-off { color: var(--optimo); display: flex; align-items: center; gap: 6px; }
+.bomba-off::before { content:''; width:8px; height:8px; border-radius:50%; background:var(--optimo); display:inline-block; }
+.bomba-on  { color: var(--critico); display: flex; align-items: center; gap: 6px; }
+.bomba-on::before { content:''; width:8px; height:8px; border-radius:50%; background:var(--critico); display:inline-block; box-shadow: 0 0 8px var(--critico); }
 
 /* ── Alertas ── */
-.alerts-list { display: flex; flex-direction: column; gap: 8px; }
+.alerts-list { display: flex; flex-direction: column; gap: 12px; }
 .alert-item {
-  background: #1a1d2e; border-radius: 8px; padding: 12px 14px;
-  border-left: 3px solid #2d3748; display: flex;
-  align-items: center; justify-content: space-between; gap: 12px;
+  background: var(--bg-panel); border-radius: 12px; padding: 16px 20px;
+  border-left: 4px solid var(--border-light); display: flex;
+  align-items: center; justify-content: space-between; gap: 16px;
+  transition: transform 0.2s;
 }
-.alert-item.alerta  { border-left-color: #f59e0b; }
-.alert-item.critico { border-left-color: #ef4444; }
-.alert-msg  { font-size: 12px; color: #cbd5e1; }
-.alert-pool { font-size: 11px; color: #475569; margin-top: 2px; }
-.alert-time { font-size: 10px; color: #475569; white-space: nowrap; }
+.alert-item:hover { transform: translateX(5px); background: #181d2e; }
+.alert-item.alerta  { border-left-color: var(--alerta); }
+.alert-item.critico { border-left-color: var(--critico); background: rgba(255,23,68,0.05); }
+.alert-msg  { font-size: 13px; font-weight: 600; color: var(--text-main); }
+.alert-pool { font-size: 11px; color: var(--text-muted); margin-top: 4px; display: inline-block; padding: 2px 8px; background: var(--bg-dark); border-radius: 10px; }
+.alert-time { font-size: 11px; color: var(--text-muted); white-space: nowrap; font-weight: 600; }
+
+/* ── Keyframes (Animaciones) ── */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse-badge { 
+  0% { box-shadow: 0 0 0 0 rgba(255, 23, 68, 0.4); } 
+  70% { box-shadow: 0 0 0 10px rgba(255, 23, 68, 0); } 
+  100% { box-shadow: 0 0 0 0 rgba(255, 23, 68, 0); } 
+}
+@keyframes pulse-critical { 
+  0%, 100% { box-shadow: 0 0 15px rgba(255, 23, 68, 0.2); border-color: rgba(255, 23, 68, 0.5); } 
+  50% { box-shadow: 0 0 30px rgba(255, 23, 68, 0.5); border-color: rgba(255, 23, 68, 1); } 
+}
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+
 </style>
 </head>
 <body>
@@ -205,28 +291,26 @@ aside {
     <div class="logo-icon">💧</div>
     <div>
       <div class="logo-text">AquaSensors</div>
-      <div class="logo-sub">Simulador controlado v2</div>
+      <div class="logo-sub">Command Center v2</div>
     </div>
   </div>
   <div class="header-right">
-    <div id="modo-label" style="font-size:12px;color:#64748b;">Modo: —</div>
+    <div id="modo-label" style="font-size:13px; font-weight: 600; color:var(--text-muted);">MODO: —</div>
     <div id="bombas-badge">Bombas OFF</div>
   </div>
 </header>
 
 <div class="main">
 
-  <!-- ══ SIDEBAR ══ -->
   <aside>
 
-    <!-- Botones de modo -->
     <div>
-      <div class="section-title">Modo de simulación</div>
+      <div class="section-title">Entorno Simulado</div>
 
       <button class="modo-btn activo" id="btn-normal" onclick="cambiarModo('normal')">
         <span class="ico">☀️</span>
         <div class="info">
-          <div class="titulo">Día normal</div>
+          <div class="titulo">Día Normal</div>
           <div class="sub" id="sub-normal">T° amb 27°C · T° agua 27°C</div>
         </div>
       </button>
@@ -234,78 +318,83 @@ aside {
       <button class="modo-btn" id="btn-lluvia" onclick="cambiarModo('lluvia')">
         <span class="ico">🌧️</span>
         <div class="info">
-          <div class="titulo">Día lluvioso</div>
+          <div class="titulo">Día Lluvioso</div>
           <div class="sub" id="sub-lluvia">T° amb 18–20°C · T° agua 22–24°C</div>
         </div>
       </button>
     </div>
 
-    <!-- Info clima actual -->
     <div>
-      <div class="section-title">Condiciones activas</div>
+      <div class="section-title">Telemetría Global</div>
       <div class="clima-info">
         <div class="clima-row">
-          <span class="clima-key">T° ambiente</span>
+          <span class="clima-key">T° Ambiente</span>
           <span class="clima-val" id="ci-tamb">27°C</span>
         </div>
         <div class="clima-row">
-          <span class="clima-key">T° agua</span>
-          <span class="clima-val" id="ci-tagua">27°C</span>
+          <span class="clima-key">T° Agua Promedio</span>
+          <span class="clima-val" id="ci-tagua" style="color:#81d4fa;">27°C</span>
         </div>
         <div class="clima-row">
-          <span class="clima-key">Ciclos</span>
+          <span class="clima-key">Total Ciclos</span>
           <span class="clima-val" id="ci-ciclos">0</span>
         </div>
         <div class="clima-row">
-          <span class="clima-key">Bombas dosif.</span>
-          <span class="clima-val" id="ci-bombas" style="color:#4ade80;">OFF</span>
+          <span class="clima-key">Bombas de Químicos</span>
+          <span class="clima-val" id="ci-bombas" style="color:var(--optimo);">OFF</span>
         </div>
       </div>
     </div>
 
-    <!-- Log -->
-    <div style="display:flex;flex-direction:column;flex:1;gap:6px;">
-      <div class="section-title">Registro</div>
+    <div style="display:flex;flex-direction:column;flex:1;gap:10px;">
+      <div class="section-title">Terminal de Eventos</div>
       <div class="log-box" id="log-box">
-        <div class="log-line info">AquaSensors Simulador v2 — iniciando...</div>
+        <div class="log-line info">Sys_Init: AquaSensors UI v2.0 cargada.</div>
       </div>
     </div>
 
   </aside>
 
-  <!-- ══ CONTENIDO PRINCIPAL ══ -->
   <div class="content">
 
     <div class="stats-row">
       <div class="stat-cell">
-        <div class="stat-num" id="stat-ciclos">0</div>
-        <div class="stat-label">Ciclos</div>
+        <div class="stat-data">
+          <span class="stat-label">Ciclos Completados</span>
+          <span class="stat-num" id="stat-ciclos">0</span>
+        </div>
+        <div style="font-size:32px; opacity:0.2;">🔄</div>
       </div>
       <div class="stat-cell">
-        <div class="stat-num" id="stat-alertas">0</div>
-        <div class="stat-label">Alertas</div>
+        <div class="stat-data">
+          <span class="stat-label">Alertas Activas</span>
+          <span class="stat-num" id="stat-alertas" style="background: linear-gradient(135deg, #f6d365, #fda085); -webkit-background-clip: text;">0</span>
+        </div>
+        <div style="font-size:32px; opacity:0.2;">⚠️</div>
       </div>
       <div class="stat-cell">
-        <div class="stat-num" id="stat-criticos">0</div>
-        <div class="stat-label">Críticos</div>
+        <div class="stat-data">
+          <span class="stat-label">Sensores Críticos</span>
+          <span class="stat-num" id="stat-criticos" style="background: linear-gradient(135deg, #ff0844, #ffb199); -webkit-background-clip: text;">0</span>
+        </div>
+        <div style="font-size:32px; opacity:0.2;">🚨</div>
       </div>
     </div>
 
-    <!-- Tabs -->
     <div class="tabs">
-      <div class="tab active" onclick="showTab('albercas')">Albercas</div>
-      <div class="tab" onclick="showTab('alertas')">Alertas</div>
+      <div class="tab active" onclick="showTab('albercas')">Monitor de Albercas</div>
+      <div class="tab" onclick="showTab('alertas')">Registro de Alertas</div>
     </div>
 
     <div class="tab-content active" id="tab-albercas">
       <div class="pool-grid" id="pool-cards">
-        <div style="color:#475569;font-size:13px;padding:20px;">Conectando al servidor...</div>
+        <div style="color:var(--text-muted);font-size:14px;padding:20px;">Sincronizando con el servidor central...</div>
       </div>
     </div>
 
     <div class="tab-content" id="tab-alertas">
       <div class="alerts-list" id="alerts-list">
-        <div style="color:#475569;font-size:13px;padding:20px;">Sin alertas recientes.</div>
+        <div style="color:var(--text-muted);font-size:14px;padding:20px;">Sin alertas en el sistema.</div>
       </div>
     </div>
 
@@ -318,17 +407,17 @@ let ws = null;
 // ── WebSocket ─────────────────────────────────────────────────────
 function conectarWS() {
   ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}`);
-  ws.onopen  = () => log('Conectado al servidor', 'success');
+  ws.onopen  = () => log('Enlace de datos establecido', 'success');
   ws.onmessage = (e) => actualizarEstado(JSON.parse(e.data));
   ws.onclose = () => {
-    log('Reconectando en 3s...', 'warning');
+    log('Conexión perdida. Reintentando en 3s...', 'error');
     setTimeout(conectarWS, 3000);
   };
 }
 
 // ── Cambiar modo ──────────────────────────────────────────────────
 async function cambiarModo(modo) {
-  log(`Cambiando a modo: ${modo}...`, 'info');
+  log(`Iniciando secuencia de cambio a: ${modo.toUpperCase()}`, 'info');
   const res  = await fetch('/api/modo', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -344,9 +433,9 @@ async function cambiarModo(modo) {
   if (modo === 'lluvia') {
     document.getElementById('sub-lluvia').textContent =
       `T° amb ${data.tempAmbiente}°C · T° agua ${data.tempAgua}°C`;
-    log(`Modo LLUVIA activado | T°amb ${data.tempAmbiente}°C | T°agua ${data.tempAgua}°C | Bombas ON`, 'rain');
+    log(`MODO LLUVIA ACTIVO | T°amb ${data.tempAmbiente}°C | T°agua ${data.tempAgua}°C | Bombas ON`, 'rain');
   } else {
-    log('Modo NORMAL activado | T°amb 27°C | T°agua 27°C | Bombas OFF', 'success');
+    log('MODO NORMAL ACTIVO | T°amb 27°C | T°agua 27°C | Bombas OFF', 'success');
   }
 }
 
@@ -356,9 +445,9 @@ function actualizarEstado(data) {
   if (!cond) return;
 
   // Header
-  document.getElementById('modo-label').textContent = 'Modo: ' + (cond.modoNombre || '—');
+  document.getElementById('modo-label').textContent = 'MODO: ' + (cond.modoNombre ? cond.modoNombre.toUpperCase() : '—');
   const bb = document.getElementById('bombas-badge');
-  bb.textContent = cond.bombas ? 'Bombas ON' : 'Bombas OFF';
+  bb.textContent = cond.bombas ? 'BOMBAS ACTIVAS' : 'BOMBAS OFF';
   bb.className   = cond.bombas ? 'on' : '';
 
   // Sidebar info
@@ -366,8 +455,8 @@ function actualizarEstado(data) {
   document.getElementById('ci-tagua').textContent  = cond.tempAgua + '°C';
   document.getElementById('ci-ciclos').textContent = data.ciclosHechos || 0;
   const bc = document.getElementById('ci-bombas');
-  bc.textContent  = cond.bombas ? 'ON' : 'OFF';
-  bc.style.color  = cond.bombas ? '#f87171' : '#4ade80';
+  bc.textContent  = cond.bombas ? 'ACTIVAS' : 'OFF';
+  bc.style.color  = cond.bombas ? 'var(--critico)' : 'var(--optimo)';
 
   // Stats
   document.getElementById('stat-ciclos').textContent = data.ciclosHechos || 0;
@@ -387,41 +476,41 @@ function renderPoolCards(pools) {
     <div class="pool-card ${nivel}">
       <div class="pool-header">
         <div class="pool-nombre">${pool.nombre}</div>
-        <div class="pool-ciclo">Ciclo ${pool.ciclo}</div>
+        <div class="pool-ciclo">CICLO ${pool.ciclo}</div>
       </div>
       <div class="params-grid">
-        ${paramCell('Cloro', pool.cloro, 'ppm', stCloro(pool.cloro))}
-        ${paramCell('pH', pool.ph, '', stPh(pool.ph))}
-        ${paramCell('Turbidez / Alguicida', pool.turbidez, 'NTU', stTurb(pool.turbidez))}
+        ${paramCell('Cloro Libre', pool.cloro, 'ppm', stCloro(pool.cloro))}
+        ${paramCell('Nivel de pH', pool.ph, '', stPh(pool.ph))}
+        ${paramCell('Turbidez', pool.turbidez, 'NTU', stTurb(pool.turbidez))}
         ${paramCell('Clarificador', pool.turbidez > 1.0 ? 'Bajo' : 'Normal', '', pool.turbidez > 1.0 ? 'alerta' : 'optimo')}
       </div>
       <div class="temp-row">
         <div class="temp-cell">
-          <span class="label">T° agua</span>
+          <span class="label">T° Agua</span>
           <span class="valor">${pool.temp_agua}°C</span>
         </div>
         <div class="temp-cell">
-          <span class="label">T° ambiente</span>
+          <span class="label">T° Ambiente</span>
           <span class="valor">${pool.temp_ambiente}°C</span>
         </div>
       </div>
       <div class="bomba-row">
-        <span>Microbombas dosificación</span>
-        <span class="${pool.bombas ? 'bomba-on' : 'bomba-off'}">${pool.bombas ? 'ON' : 'OFF'}</span>
+        <span>Sistema de Dosificación</span>
+        <span class="${pool.bombas ? 'bomba-on' : 'bomba-off'}">${pool.bombas ? 'ACTIVO' : 'INACTIVO'}</span>
       </div>
     </div>`;
   }).join('');
 }
 
 function paramCell(label, valor, unit, st) {
-  const cls = st === 'optimo' ? 'val-optimo' : st === 'alerta' ? 'val-alerta' : 'val-critico';
-  const stLabel = st === 'optimo' ? 'Óptimo' : st === 'alerta' ? 'Alerta' : 'Crítico';
+  const colorCls = st === 'optimo' ? 'val-optimo' : st === 'alerta' ? 'val-alerta' : 'val-critico';
+  const bgCls = st === 'optimo' ? 'st-bg-optimo' : st === 'alerta' ? 'st-bg-alerta' : 'st-bg-critico';
+  const stLabel = st === 'optimo' ? 'ESTABLE' : st === 'alerta' ? 'ALERTA' : 'CRÍTICO';
   return `
     <div class="param-cell">
       <div class="param-label">${label}</div>
-      <div class="param-valor ${cls}">${valor}</div>
-      <div class="param-unit">${unit}</div>
-      <div class="param-status ${cls}">${stLabel}</div>
+      <div class="param-valor ${colorCls}">${valor} <span class="param-unit">${unit}</span></div>
+      <div class="param-status ${bgCls}">${stLabel}</div>
     </div>`;
 }
 
@@ -450,17 +539,17 @@ async function cargarAlertas() {
 
   const container = document.getElementById('alerts-list');
   if (!data.length) {
-    container.innerHTML = '<div style="color:#475569;font-size:13px;padding:20px;">Sin alertas recientes.</div>';
+    container.innerHTML = '<div style="color:var(--text-muted);font-size:14px;padding:20px;">Sistemas operando dentro de parámetros normales.</div>';
     return;
   }
   container.innerHTML = data.map(a => {
     const fecha = new Date(a.created_at).toLocaleString('es-MX',
-      { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' });
+      { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     return `
       <div class="alert-item ${a.nivel}">
         <div>
           <div class="alert-msg">${a.mensaje}</div>
-          <div class="alert-pool">${a.pools?.nombre || ''} · ${a.parametro}</div>
+          <div class="alert-pool">${a.pools?.nombre || 'General'} · ${a.parametro.toUpperCase()}</div>
         </div>
         <div class="alert-time">${fecha}</div>
       </div>`;
