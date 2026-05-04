@@ -27,6 +27,7 @@ class Scheduler {
     this.ciclosHechos        = 0;
     this.estadoPools         = {};
     this.condicionesActuales = null;
+    this.ultimoEstadoAlertas  = {};
   }
 
   // ── Arranque automático con todas las albercas ───────────────────
@@ -58,7 +59,7 @@ class Scheduler {
       await this._ejecutarLectura();
     }, INTERVALO_LECTURA_MS);
 
-    console.log(`\n[Scheduler] Iniciado — modo: ${getModoActual()} | lecturas cada 5 min\n`);
+    console.log(`\n[Scheduler] Iniciado — modo: ${getModoActual()} | lecturas cada 3 seg\n`);
     this._broadcastEstado();
   }
 
@@ -105,9 +106,15 @@ class Scheduler {
         const e = this.estadoPools[pool.id];
         const r = () => (Math.random() * 0.02 - 0.01); // ruido mínimo ±0.01
 
-        e.cloro    = Math.max(0,   Math.min(8,   e.cloro    + deg.cloro    + r()));
-        e.ph       = Math.max(5.5, Math.min(9.0, e.ph       + deg.ph       + r() * 0.3));
-        e.turbidez = Math.max(0,   Math.min(10,  e.turbidez + deg.turbidez + r()));
+        if (cond.modoClima === 'lluvia') {
+          e.cloro    = Math.max(0,   Math.min(8,   e.cloro    + deg.cloro    + r()));
+          e.ph       = Math.max(5.5, Math.min(9.0, e.ph       + deg.ph       + r() * 0.3));
+          e.turbidez = Math.max(0,   Math.min(10,  e.turbidez + deg.turbidez + r()));
+        } else {
+          e.cloro    = Math.round(e.cloro    * 100) / 100;
+          e.ph       = Math.round(e.ph       * 100) / 100;
+          e.turbidez = Math.round(e.turbidez * 100) / 100;
+        }
 
         const cloro    = Math.round(e.cloro    * 100) / 100;
         const ph       = Math.round(e.ph       * 100) / 100;
@@ -142,13 +149,21 @@ class Scheduler {
 
   // ── Evaluar alertas ──────────────────────────────────────────────
   async _procesarAlertas(pool, { lecturas }) {
+    let alertasGeneradas = 0;
     const checks = [
       { param: 'cloro',    val: lecturas.cloro.valor,    st: lecturas.cloro.status    },
       { param: 'ph',       val: lecturas.ph.valor,        st: lecturas.ph.status        },
       { param: 'turbidez', val: lecturas.turbidez.valor,  st: lecturas.turbidez.status  },
     ];
     for (const { param, val, st } of checks) {
+      const key = `${pool.id}:${param}`;
+      const estadoAnterior = this.ultimoEstadoAlertas[key];
+
+      if (estadoAnterior === st) continue;
+      this.ultimoEstadoAlertas[key] = st;
+
       if (st === 'optimo') continue;
+
       await this.injector.insertarAlerta({
         pool_id:         pool.id,
         parametro:       param,
@@ -156,6 +171,12 @@ class Scheduler {
         nivel:           st,
         mensaje:         this._mensajeAlerta(param, val, st),
       });
+
+      alertasGeneradas++;
+    }
+
+    if (alertasGeneradas > 0) {
+      console.log(`[Alertas] ${pool.nombre}: ${alertasGeneradas} alerta(s) generada(s)`);
     }
   }
 
