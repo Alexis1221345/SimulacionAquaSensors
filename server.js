@@ -92,31 +92,122 @@ app.get('/api/estado', async (req, res) => {
   res.json({ ...estado, inventario });
 });
 
-// POST /api/modo — cambia entre normal y lluvia desde el panel
+// POST /api/modo — cambia entre normal y lluvia desde el panel (OPTIMIZADO)
 app.post('/api/modo', async (req, res) => {
+  const tInicio = Date.now();
   const { modo } = req.body;
   if (modo !== 'normal' && modo !== 'lluvia')
     return res.status(400).json({ error: 'Modo debe ser "normal" o "lluvia"' });
 
+  // Cambiar modo de forma inmediata
   await scheduler.cambiarModo(modo);
-  const cond = scheduler.getEstadoCompleto().condiciones;
-  console.log(`[Server] Panel → Modo: ${modo} | T°amb: ${cond.tempAmbiente}°C | T°agua: ${cond.tempAgua}°C`);
-  res.json({ ok: true, modo, tempAmbiente: cond.tempAmbiente, tempAgua: cond.tempAgua, bombas: cond.bombas });
+  const estado = scheduler.getEstadoCompleto();
+  const cond = estado.condiciones;
+  const tTotal = Date.now() - tInicio;
+  
+  console.log(`[Server] Panel → Modo: ${modo} | T°amb: ${cond.tempAmbiente}°C | T°agua: ${cond.tempAgua}°C | Bombas: ${cond.bombas} | ⏱️ ${tTotal}ms`);
+  
+  // Broadcast inmediato a WebSocket
+  broadcast(estado);
+  
+  res.set('X-Response-Time', `${tTotal}ms`);
+  res.json({ 
+    ok: true, 
+    modo, 
+    tempAmbiente: cond.tempAmbiente, 
+    tempAgua: cond.tempAgua, 
+    bombas: cond.bombas,
+    responseTimeMs: tTotal
+  });
 });
 
-// GET /api/modo — el ESP32 consulta este endpoint para saber si encender bombas
-app.get('/api/modo', (req, res) => {
-  const estado = scheduler.getEstadoCompleto();
-  const cond   = estado.condiciones;
+// ENDPOINT UNIFICADO: Datos de sensores + Estado de bombas (CON CACHÉ)
+let _estadoCache = null;
+let _ultimoTimestampCache = 0;
 
-  res.json({
-    modo:         cond.modoClima,
-    bombas:       cond.bombas,
-    tempAmbiente: cond.tempAmbiente,
-    tempAgua:     cond.tempAgua,
-    activar:      cond.bombas
-      ? ['cloro_liquido', 'alguicida', 'clarificador', 'carbonato_sodio']
-      : [],
+app.get('/api/esp32/status', (req, res) => {
+  const estado = scheduler.getEstadoCompleto();
+  const cond = estado.condiciones;
+
+  if (estado.pools && estado.pools.length > 0) {
+    // Tomamos la primera alberca (Aqua Sensrs)
+    const p = estado.pools[0]; 
+
+    const respuesta = {
+      // Datos de los sensores
+      cloro: p.cloro,
+      ph: p.ph,
+      turbidez: p.turbidez,
+      tempAgua: p.temp_agua,
+      
+      // Lógica de control
+      modo: cond.modoClima,
+      bombas: cond.bombas,
+      activar: cond.bombas 
+        ? ['cloro_liquido', 'alguicida', 'clarificador', 'carbonato_sodio'] 
+        : [],
+      
+      // IMPORTANTE: Timestamp para saber si hay cambios
+      timestamp: estado.timestamp,
+      ciclo: p.ciclo
+    };
+    
+    // Caché para respuestas ultrarápidas
+    _estadoCache = respuesta;
+    _ultimoTimestampCache = Date.now();
+    
+    res.set('Content-Type', 'application/json');
+    res.set('X-Response-Time', `${Date.now() - _ultimoTimestampCache}ms`);
+    res.json(respuesta);
+  } else {
+    res.status(404).json({ error: "No hay albercas activas" });
+  }
+});
+
+// ENDPOINT INMEDIATO: Confirmación instantánea sin esperar ciclo
+app.get('/api/esp32/quick-status', (req, res) => {
+  if (_estadoCache) {
+    res.set('X-Cached', 'true');
+    res.json(_estadoCache);
+  } else {
+    // Si no hay caché, hacer lectura urgente
+    res.set('X-Cached', 'false');
+    const estado = scheduler.getEstadoCompleto();
+    const cond = estado.condiciones;
+    if (estado.pools && estado.pools.length > 0) {
+      const p = estado.pools[0];
+      res.json({
+        cloro: p.cloro,
+        ph: p.ph,
+        turbidez: p.turbidez,
+        tempAgua: p.temp_agua,
+        modo: cond.modoClima,
+        bombas: cond.bombas,
+        activar: cond.bombas 
+          ? ['cloro_liquido', 'alguicida', 'clarificador', 'carbonato_sodio'] 
+          : [],
+        timestamp: estado.timestamp,
+        ciclo: p.ciclo
+      });
+    } else {
+      res.status(404).json({ error: "No hay albercas activas" });
+    }
+  }
+});
+
+// ⚡ ENDPOINT PING: Respuesta ultrarápida (<1ms) para verificar conexión ESP32
+app.get('/api/esp32/ping', (req, res) => {
+  const tInicio = Date.now();
+  const estado = scheduler.getEstadoCompleto();
+  const cond = estado.condiciones;
+  const tTotal = Date.now() - tInicio;
+  
+  res.set('X-Response-Time', `${tTotal}ms`);
+  res.json({ 
+    ok: true,
+    bombas: cond.bombas,
+    ciclo: estado.ciclosHechos,
+    responseMs: tTotal
   });
 });
 

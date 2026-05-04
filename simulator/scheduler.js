@@ -7,7 +7,7 @@
 const Injector = require('./injector');
 const { getCondicionesHora, getNombreEscenario, setModo, getModoActual } = require('./day_cycle');
 
-const INTERVALO_LECTURA_MS = 5 * 60 * 1000; // 5 minutos
+const INTERVALO_LECTURA_MS = 3 * 1000; // 3 segundos (optimizado para ESP32 + motores)
 
 // Valores iniciales por modo
 const VALORES_INICIALES = {
@@ -94,10 +94,11 @@ class Scheduler {
   async _ejecutarLectura() {
     if (!this.corriendo) return;
     this.ciclosHechos++;
+    const tInicio = Date.now();
     const cond = this.condicionesActuales || getCondicionesHora();
     const deg  = cond.degradacion;
 
-    console.log(`\n[Scheduler] Lectura ${this.ciclosHechos} | Modo: ${cond.modoClima} | T°amb: ${cond.tempAmbiente}°C | T°agua: ${cond.tempAgua}°C`);
+    console.log(`\n[Scheduler] Lectura #${this.ciclosHechos} | Modo: ${cond.modoClima} | T°amb: ${cond.tempAmbiente}°C | T°agua: ${cond.tempAgua}°C | Bombas: ${cond.bombas ? '✅' : '❌'}`);
 
     for (const pool of this.pools) {
       try {
