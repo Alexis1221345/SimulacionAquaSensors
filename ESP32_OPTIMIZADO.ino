@@ -11,6 +11,8 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <WebServer.h>
+#include <Preferences.h>
 
 // ── OLED ──────────────────────────────────────────────────────────
 #define OLED_WIDTH  128
@@ -20,6 +22,15 @@
 
 Adafruit_SSD1306 display(OLED_WIDTH, OLED_HEIGHT, &Wire, OLED_RESET);
 bool oledOk = false;
+
+// ── Provisioning (SoftAP + HTTP) ─────────────────────────────────────
+WebServer server(80);
+Preferences prefs;
+String savedSsid = "";
+String savedPass = "";
+bool provisioningMode = false;
+const char* DEFAULT_AP_SSID = "AquaSensors-Setup";
+const char* DEFAULT_AP_PASS = ""; // abierto por simplicidad
 
 // ── WiFi ──────────────────────────────────────────────────────────
 const char* WIFI_SSID     = "Totalplay-5FB5";
@@ -83,6 +94,11 @@ void oledPantallaBombas();
 void conectarWiFi();
 bool pingServidor();
 void consultarStatus(String &modo, bool &bombasActivas);
+void startProvisioningAP();
+void stopProvisioningAP();
+void handleProvision();
+void loadSavedCredentials();
+void saveCredentials(const char* ssid, const char* pass);
 void enviarLecturas(float ph, float cloro, float temperatura, float turbidez, float alcalinidad);
 void controlarBombasPorModo(String modo);
 void apagarTodasLasBombas();
@@ -124,6 +140,7 @@ void setup() {
   Serial.println("╚══════════════════════════════════╝\n");
 
   randomSeed(analogRead(0));
+  loadSavedCredentials();
   conectarWiFi();
 }
 
@@ -131,6 +148,11 @@ void setup() {
 // LOOP — Multi-timing para máxima responsividad
 // ═════════════════════════════════════════════════════════════════
 void loop() {
+  // Si estamos en modo provisioning atendemos al servidor HTTP
+  if (provisioningMode) {
+    server.handleClient();
+  }
+
 
   // — PING rápido cada 1 segundo (verifica conexión) —
   if (millis() - ultimoPing >= INTERVALO_PING) {
@@ -423,7 +445,13 @@ void apagarTodasLasBombas() {
 // WIFI
 // ═════════════════════════════════════════════════════════════════
 void conectarWiFi() {
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  // Prioriza credenciales guardadas si existen
+  if (savedSsid.length() > 0) {
+    Serial.printf("[WiFi] Intentando conectar con credenciales guardadas: %s\n", savedSsid.c_str());
+    WiFi.begin(savedSsid.c_str(), savedPass.c_str());
+  } else {
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  }
   Serial.print("[WiFi] Conectando");
   int intentos = 0;
   while (WiFi.status() != WL_CONNECTED && intentos < 30) {
@@ -434,8 +462,14 @@ void conectarWiFi() {
   g_wifiOk = (WiFi.status() == WL_CONNECTED);
   if (g_wifiOk) {
     Serial.println("\n[WiFi] ✅ Conectado: " + WiFi.localIP().toString());
+    // Si estábamos en modo provisioning, detener servidor
+    if (provisioningMode) stopProvisioningAP();
   } else {
     Serial.println("\n[WiFi] ❌ No se pudo conectar.");
+    // Si no hay credenciales guardadas o falló la conexión, levantar SoftAP
+    if (!provisioningMode) {
+      startProvisioningAP();
+    }
   }
 }
 
@@ -474,6 +508,71 @@ void consultarStatus(String &modo, bool &bombasActivas) {
     g_ciclosErrados++;
   }
   http.end();
+}
+
+
+// ═════════════════════════════════════════════════════════════════
+// Provisioning HTTP handlers
+// ═════════════════════════════════════════════════════════════════
+void handleProvision() {
+  if (!server.hasArg("plain")) {
+    server.send(400, "text/plain", "no body");
+    return;
+  }
+  String body = server.arg("plain");
+  StaticJsonDocument<256> doc;
+  DeserializationError err = deserializeJson(doc, body);
+  if (err) {
+    server.send(400, "application/json", "{\"ok\":false, \"error\":\"json\"}");
+    return;
+  }
+  const char* ssid = doc["ssid"] | "";
+  const char* pass = doc["password"] | "";
+  if (strlen(ssid) == 0) {
+    server.send(400, "application/json", "{\"ok\":false,\"error\":\"missing ssid\"}");
+    return;
+  }
+  saveCredentials(ssid, pass);
+  server.send(200, "application/json", "{\"ok\":true}\n");
+  delay(500);
+  ESP.restart();
+}
+
+void startProvisioningAP() {
+  Serial.println("[AP] Iniciando SoftAP para provisioning...");
+  WiFi.softAP(DEFAULT_AP_SSID, DEFAULT_AP_PASS);
+  IPAddress ip = WiFi.softAPIP();
+  Serial.printf("[AP] SoftAP listo en %s\n", ip.toString().c_str());
+  server.on("/provision", HTTP_POST, handleProvision);
+  server.begin();
+  provisioningMode = true;
+  g_wifiOk = false;
+}
+
+void stopProvisioningAP() {
+  if (!provisioningMode) return;
+  Serial.println("[AP] Deteniendo SoftAP y servidor de provisioning");
+  server.stop();
+  WiFi.softAPdisconnect(true);
+  provisioningMode = false;
+}
+
+void loadSavedCredentials() {
+  prefs.begin("wifi", true);
+  savedSsid = prefs.getString("ssid", "");
+  savedPass = prefs.getString("pass", "");
+  prefs.end();
+  if (savedSsid.length() > 0) {
+    Serial.printf("[Prefs] Cargado SSID guardado: %s\n", savedSsid.c_str());
+  }
+}
+
+void saveCredentials(const char* ssid, const char* pass) {
+  prefs.begin("wifi", false);
+  prefs.putString("ssid", ssid);
+  prefs.putString("pass", pass);
+  prefs.end();
+  Serial.printf("[Prefs] Guardadas credenciales para SSID: %s\n", ssid);
 }
 
 // ═════════════════════════════════════════════════════════════════
