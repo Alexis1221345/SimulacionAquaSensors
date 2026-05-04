@@ -153,39 +153,41 @@ void loop() {
     server.handleClient();
   }
 
-
-  // — PING rápido cada 1 segundo (verifica conexión) —
-  if (millis() - ultimoPing >= INTERVALO_PING) {
-    ultimoPing = millis();
-    if (!pingServidor()) {
-      g_wifiOk = false;
-      g_ciclosErrados++;
-    } else {
-      g_wifiOk = true;
-    }
-  }
-
-  // — STATUS cada 5 segundos (obtiene modo y aplica control) —
-  if (millis() - ultimoStatus >= INTERVALO_STATUS) {
-    ultimoStatus = millis();
-    
-    if (WiFi.status() != WL_CONNECTED) {
-      g_wifiOk = false;
-      Serial.println("[WiFi] Desconectado, reconectando...");
-      apagarTodasLasBombas();
-      conectarWiFi();
-    } else {
-      String modo = "normal";
-      bool bombasActivas = false;
-      consultarStatus(modo, bombasActivas);
-      
-      // ⚡ CONTROL DE BOMBAS POR MODO (NUEVA LÓGICA)
-      if (modo != g_modoAnterior) {
-        Serial.printf("[Cambio] Modo: %s → %s\n", g_modoAnterior.c_str(), modo.c_str());
-        g_modoAnterior = modo;
+  // En provisioning no hacemos polling al servidor remoto.
+  if (!provisioningMode) {
+    // — PING rápido cada 1 segundo (verifica conexión) —
+    if (millis() - ultimoPing >= INTERVALO_PING) {
+      ultimoPing = millis();
+      if (!pingServidor()) {
+        g_wifiOk = false;
+        g_ciclosErrados++;
+      } else {
+        g_wifiOk = true;
       }
-      controlarBombasPorModo(modo);
-      g_ciclosExitosos++;
+    }
+
+    // — STATUS cada 5 segundos (obtiene modo y aplica control) —
+    if (millis() - ultimoStatus >= INTERVALO_STATUS) {
+      ultimoStatus = millis();
+      
+      if (WiFi.status() != WL_CONNECTED) {
+        g_wifiOk = false;
+        Serial.println("[WiFi] Desconectado, reconectando...");
+        apagarTodasLasBombas();
+        conectarWiFi();
+      } else {
+        String modo = "normal";
+        bool bombasActivas = false;
+        consultarStatus(modo, bombasActivas);
+        
+        // ⚡ CONTROL DE BOMBAS POR MODO (NUEVA LÓGICA)
+        if (modo != g_modoAnterior) {
+          Serial.printf("[Cambio] Modo: %s → %s\n", g_modoAnterior.c_str(), modo.c_str());
+          g_modoAnterior = modo;
+        }
+        controlarBombasPorModo(modo);
+        g_ciclosExitosos++;
+      }
     }
   }
 
